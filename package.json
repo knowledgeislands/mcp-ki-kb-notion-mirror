@@ -30,6 +30,25 @@
   "engines": {
     "node": ">=22.0.0"
   },
+  "exports": {
+    ".": {
+      "types": "./dist/mcp-server/index.d.ts",
+      "import": "./dist/mcp-server/index.js"
+    },
+    "./config": {
+      "types": "./dist/config/index.d.ts",
+      "import": "./dist/config/index.js"
+    },
+    "./notion-client": {
+      "types": "./dist/main/notion-client/index.d.ts",
+      "import": "./dist/main/notion-client/index.js"
+    },
+    "./mirror": {
+      "types": "./dist/main/mirror/index.d.ts",
+      "import": "./dist/main/mirror/index.js"
+    },
+    "./package.json": "./package.json"
+  },
   "files": [
     "dist"
   ],
