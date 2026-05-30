@@ -27,7 +27,7 @@ A KB convention change (a new exclusion rule, a folder-layout shift, banner-text
 
 ## Tools
 
-### `notion_mirror_publish(kb_path, parent, mode?, icon?, full_width?, link_map?)` — write
+### `notion_mirror_publish(kb_path, parent, mode?, icon?, link_map?)` — write
 
 Mirror one note under `parent` and record the URL in its frontmatter.
 
@@ -36,7 +36,6 @@ Mirror one note under `parent` and record the URL in its frontmatter.
 - `mode` (`"create"` | `"replace"` | `"force"`, default `"create"`) — how to handle an already-mirrored note (see [When to use which mode](#when-to-use-which-mode)). A non-mirrored note is created in every mode.
 - `force` (boolean, deprecated) — legacy alias for `mode: "force"`. Prefer `mode`; `force` will be dropped.
 - `icon` (object, optional) — `{ type: "emoji", emoji }` or `{ type: "external", external: { url } }`, passed to Notion verbatim. Omit for no icon.
-- `full_width` (boolean, default `true`) — lay the page out full-width. No-op if the Notion API rejects the hint (the page lands at default width; a warning is logged once).
 - `link_map` (object, optional) — maps a `[[target]]` string to that note's mirror URL. Resolved wikilinks become Notion `@`mentions; unresolved ones render as italic text. Omit/empty → all wikilinks italic. The MCP does not build this map — the orchestrator does (see [Wikilinks](#wikilinks-link_map)).
 
 Returns `{ url, page_id, published_at, mode }`. For `replace`, `url` equals the pre-existing `notion_mirror_url`. When already mirrored in `create` mode, returns `{ skipped: true, existing_url }`. Errors `Nothing to publish …` if the body is empty and the banner is disabled.
