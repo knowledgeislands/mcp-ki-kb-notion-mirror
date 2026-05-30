@@ -67,6 +67,41 @@ describe('notion-client (mcp-notion-mirror)', () => {
       expect(body.properties).toEqual({ title: { title: [{ text: { content: 'Child' } }] } })
     })
 
+    it('includes icon and full-width format in the POST body by default', async () => {
+      fetchMock.mockResolvedValueOnce(ok(PAGE_RESPONSE))
+      const { createPage } = await import('./notion-client.js')
+      await createPage({ parent: { type: 'page_id', page_id: PAGE_HEX }, title: 'C', children: [{ a: 1 }], icon: { type: 'emoji', emoji: '📚' } })
+      const body = JSON.parse(fetchMock.mock.calls[0]?.[1].body)
+      expect(body.icon).toEqual({ type: 'emoji', emoji: '📚' })
+      expect(body.format).toEqual({ page_full_width: true })
+    })
+
+    it('omits the format hint when full_width is false', async () => {
+      fetchMock.mockResolvedValueOnce(ok(PAGE_RESPONSE))
+      const { createPage } = await import('./notion-client.js')
+      await createPage({ parent: { type: 'page_id', page_id: PAGE_HEX }, title: 'C', children: [{ a: 1 }], fullWidth: false })
+      expect(JSON.parse(fetchMock.mock.calls[0]?.[1].body).format).toBeUndefined()
+    })
+
+    it('retries once without the format hint when Notion 400s on it, then stops sending it', async () => {
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ code: 'validation_error', message: 'format is not expected' }), { status: 400 }))
+      fetchMock.mockResolvedValueOnce(ok(PAGE_RESPONSE)) // retry without format
+      fetchMock.mockResolvedValueOnce(ok(PAGE_RESPONSE)) // a later create — should skip format
+      const { createPage } = await import('./notion-client.js')
+      await createPage({ parent: { type: 'page_id', page_id: PAGE_HEX }, title: 'C', children: [{ a: 1 }] })
+      expect(JSON.parse(fetchMock.mock.calls[0]?.[1].body).format).toEqual({ page_full_width: true }) // first attempt
+      expect(JSON.parse(fetchMock.mock.calls[1]?.[1].body).format).toBeUndefined() // retry
+      await createPage({ parent: { type: 'page_id', page_id: PAGE_HEX }, title: 'C2', children: [{ a: 1 }] })
+      expect(JSON.parse(fetchMock.mock.calls[2]?.[1].body).format).toBeUndefined() // learned: no format
+    })
+
+    it('does not swallow non-400 errors as a full-width problem', async () => {
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ code: 'unauthorized', message: 'no' }), { status: 401 }))
+      const { createPage, NotionApiError } = await import('./notion-client.js')
+      await expect(createPage({ parent: { type: 'page_id', page_id: PAGE_HEX }, title: 'C', children: [{ a: 1 }] })).rejects.toThrow(NotionApiError)
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+
     it('throws when a database parent is given without a title property name', async () => {
       const { createPage, NotionApiError } = await import('./notion-client.js')
       await expect(createPage({ parent: { type: 'database_id', database_id: DB_ID }, title: 'x', children: [] })).rejects.toThrow(NotionApiError)
@@ -141,6 +176,37 @@ describe('notion-client (mcp-notion-mirror)', () => {
       expect(url).toBe(`https://api.notion.test/v1/pages/${PAGE_HEX}`)
       expect(init.method).toBe('PATCH')
       expect(JSON.parse(init.body)).toEqual({ parent: { type: 'page_id', page_id: '0000000000000000000000000000abcd' } })
+    })
+  })
+
+  describe('block helpers', () => {
+    it('getBlockChildren follows pagination and returns all results in order', async () => {
+      fetchMock.mockResolvedValueOnce(ok({ results: [{ id: '1', type: 'child_page' }], has_more: true, next_cursor: 'c1' }))
+      fetchMock.mockResolvedValueOnce(ok({ results: [{ id: '2', type: 'paragraph' }], has_more: false, next_cursor: null }))
+      const { getBlockChildren } = await import('./notion-client.js')
+      const blocks = await getBlockChildren(PAGE_HEX)
+      expect(blocks.map((b) => b.id)).toEqual(['1', '2'])
+      expect(fetchMock.mock.calls[0]?.[0]).toBe(`https://api.notion.test/v1/blocks/${PAGE_HEX}/children?page_size=100`)
+      expect(fetchMock.mock.calls[1]?.[0]).toContain('start_cursor=c1')
+    })
+
+    it('appendBlockChildren PATCHes the children payload', async () => {
+      fetchMock.mockResolvedValueOnce(ok({}))
+      const { appendBlockChildren } = await import('./notion-client.js')
+      await appendBlockChildren(PAGE_HEX, [{ type: 'heading_2' }])
+      const [url, init] = fetchMock.mock.calls[0] ?? []
+      expect(url).toBe(`https://api.notion.test/v1/blocks/${PAGE_HEX}/children`)
+      expect(init.method).toBe('PATCH')
+      expect(JSON.parse(init.body)).toEqual({ children: [{ type: 'heading_2' }] })
+    })
+
+    it('deleteBlock issues a DELETE', async () => {
+      fetchMock.mockResolvedValueOnce(ok({}))
+      const { deleteBlock } = await import('./notion-client.js')
+      await deleteBlock(PAGE_HEX)
+      const [url, init] = fetchMock.mock.calls[0] ?? []
+      expect(url).toBe(`https://api.notion.test/v1/blocks/${PAGE_HEX}`)
+      expect(init.method).toBe('DELETE')
     })
   })
 

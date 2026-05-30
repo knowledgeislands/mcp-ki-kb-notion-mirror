@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const DB_ID = '36f9f7187cc280f69272e60aa89bff24'
 const PAGE_HEX = '3709f7187cc2814e8652f99fd36857ff'
+const OLD_PARENT = 'a'.repeat(32)
 const MIRROR_URL = `https://www.notion.so/My-Note-${PAGE_HEX}`
 const PAGE_RESPONSE = {
   id: '3709f718-7cc2-814e-8652-f99fd36857ff',
@@ -19,6 +20,9 @@ const DB_RESPONSE = { properties: { Tags: { id: 't', type: 'multi_select' }, Pag
 
 const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200 })
 const fail = (status: number) => new Response(JSON.stringify({ code: 'x', message: 'boom' }), { status })
+// A clean footer refresh: GET children returns an empty list, so refreshFooter
+// finds no sentinel to delete and appends nothing — a single, side-effect-free GET.
+const emptyChildren = () => ok({ results: [], has_more: false, next_cursor: null })
 
 const FM = (extra = ''): string => `---\nstatus: current\nnotion_source_url: https://www.notion.so/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nnotion_path: A / B${extra}\n---\n# My Note\n\nBody paragraph.\n`
 
@@ -105,12 +109,63 @@ describe('mirror-ops', () => {
 
     it('under a page parent uses the reserved title and makes no GET database call', async () => {
       const abs = await writeNote('My Note.md', FM())
-      fetchMock.mockResolvedValueOnce(ok(PAGE_RESPONSE)) // POST only
+      fetchMock.mockResolvedValueOnce(ok(PAGE_RESPONSE)) // POST
+      fetchMock.mockResolvedValueOnce(emptyChildren()) // footer refresh GET
       const { publishNote } = await importOps()
       await publishNote(abs, { type: 'page_id', page_id: PAGE_HEX }, false)
-      expect(fetchMock).toHaveBeenCalledTimes(1)
       const body = JSON.parse(fetchMock.mock.calls[0]?.[1].body)
       expect(body.properties).toEqual({ title: { title: [{ text: { content: 'My Note' } }] } })
+      expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('/v1/databases/'))).toBe(false)
+    })
+
+    it('passes a caller-supplied icon and resolves wikilinks via link_map (mention) / italic (unresolved)', async () => {
+      const linkedHex = 'c'.repeat(32)
+      const abs = await writeNote('My Note.md', `---\nstatus: x\nnotion_path: A\n---\nSee [[Other]] and [[Gone]].\n`)
+      fetchMock.mockResolvedValueOnce(ok(PAGE_RESPONSE)) // POST
+      fetchMock.mockResolvedValueOnce(emptyChildren()) // footer
+      const { publishNote } = await importOps()
+      await publishNote(abs, { type: 'page_id', page_id: PAGE_HEX }, false, {
+        icon: { type: 'emoji', emoji: '📚' },
+        linkMap: { Other: `https://www.notion.so/Other-${linkedHex}` }
+      })
+      const body = JSON.parse(fetchMock.mock.calls[0]?.[1].body)
+      expect(body.icon).toEqual({ type: 'emoji', emoji: '📚' })
+      const rich = body.children[1].paragraph.rich_text as Array<Record<string, unknown>>
+      expect(rich.some((r) => r.type === 'mention' && (r.mention as { page: { id: string } }).page.id === linkedHex)).toBe(true)
+      expect(rich.some((r) => (r as { annotations?: { italic?: boolean } }).annotations?.italic && (r as { text?: { content?: string } }).text?.content === 'Gone')).toBe(true)
+    })
+
+    it('refreshes the parent footer after publishing under a page parent', async () => {
+      const abs = await writeNote('My Note.md', FM())
+      fetchMock.mockResolvedValueOnce(ok(PAGE_RESPONSE)) // POST
+      fetchMock.mockResolvedValueOnce(ok({ results: [{ id: PAGE_HEX, type: 'child_page', child_page: { title: 'My Note' } }], has_more: false, next_cursor: null })) // footer GET
+      fetchMock.mockResolvedValueOnce(ok({})) // footer PATCH append
+      const { publishNote } = await importOps()
+      await publishNote(abs, { type: 'page_id', page_id: PAGE_HEX }, false)
+      const footerGet = fetchMock.mock.calls[1]
+      const footerPatch = fetchMock.mock.calls[2]
+      expect(footerGet?.[0]).toBe(`https://api.notion.test/v1/blocks/${PAGE_HEX}/children?page_size=100`)
+      expect(footerPatch?.[1].method).toBe('PATCH')
+    })
+
+    it('still succeeds when the parent footer refresh fails (failure is swallowed)', async () => {
+      const abs = await writeNote('My Note.md', FM())
+      fetchMock.mockResolvedValueOnce(ok(PAGE_RESPONSE)) // POST
+      fetchMock.mockResolvedValueOnce(fail(500)) // footer GET fails
+      const { publishNote } = await importOps()
+      const result = await publishNote(abs, { type: 'page_id', page_id: PAGE_HEX }, false)
+      expect((result as { url: string }).url).toBe(MIRROR_URL)
+      expect(await fsp.readFile(abs, 'utf-8')).toContain('notion_mirror_url:')
+    })
+
+    it('does NOT refresh a footer when publishing under a database parent', async () => {
+      const abs = await writeNote('My Note.md', FM())
+      fetchMock.mockResolvedValueOnce(ok(DB_RESPONSE)) // GET database
+      fetchMock.mockResolvedValueOnce(ok(PAGE_RESPONSE)) // POST
+      const { publishNote } = await importOps()
+      await publishNote(abs, { type: 'database_id', database_id: DB_ID }, false)
+      expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('/children'))).toBe(false)
+      expect(fetchMock).toHaveBeenCalledTimes(2)
     })
 
     it('throws when the note has no frontmatter', async () => {
@@ -123,6 +178,7 @@ describe('mirror-ops', () => {
     it('publishes just the banner when the body is empty', async () => {
       const abs = await writeNote('note.md', '---\nstatus: x\nnotion_path: A\n---\n')
       fetchMock.mockResolvedValueOnce(ok(PAGE_RESPONSE)) // POST (page parent)
+      fetchMock.mockResolvedValueOnce(emptyChildren()) // footer refresh GET
       const { publishNote } = await importOps()
       await publishNote(abs, { type: 'page_id', page_id: PAGE_HEX }, false)
       const body = JSON.parse(fetchMock.mock.calls[0]?.[1].body)
@@ -151,16 +207,28 @@ describe('mirror-ops', () => {
       expect(await fsp.readFile(abs, 'utf-8')).toBe(content)
     })
 
-    it('with dry_run false archives the page and clears the mirror fields', async () => {
+    it('with dry_run false archives the page and clears the mirror fields (database parent → no footer)', async () => {
       const abs = await writeNote('note.md', FM(`\nnotion_mirror_url: ${MIRROR_URL}\nnotion_mirror_published_at: 2026-05-30T01:13:00Z`))
+      fetchMock.mockResolvedValueOnce(ok({ ...PAGE_RESPONSE, parent: { type: 'database_id', database_id: DB_ID } })) // GET page (learn parent)
       fetchMock.mockResolvedValueOnce(ok({})) // archive
       const { unpublishNote } = await importOps()
       const result = await unpublishNote(abs, false)
       expect(result).toEqual({ archived: true, page_id: PAGE_HEX, url: MIRROR_URL })
+      expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('/children'))).toBe(false)
       const written = await fsp.readFile(abs, 'utf-8')
       expect(written).not.toContain('notion_mirror_url')
       expect(written).not.toContain('notion_mirror_published_at')
       expect(written).toContain('notion_path: A / B')
+    })
+
+    it('refreshes the parent footer when the archived page had a page parent', async () => {
+      const abs = await writeNote('note.md', FM(`\nnotion_mirror_url: ${MIRROR_URL}`))
+      fetchMock.mockResolvedValueOnce(ok({ ...PAGE_RESPONSE, parent: { type: 'page_id', page_id: OLD_PARENT } })) // GET page
+      fetchMock.mockResolvedValueOnce(ok({})) // archive
+      fetchMock.mockResolvedValueOnce(emptyChildren()) // footer refresh GET of OLD_PARENT
+      const { unpublishNote } = await importOps()
+      await unpublishNote(abs, false)
+      expect(fetchMock.mock.calls.some((c) => String(c[0]) === `https://api.notion.test/v1/blocks/${OLD_PARENT}/children?page_size=100`)).toBe(true)
     })
 
     it('returns not-published when the note has no mirror url', async () => {
@@ -178,15 +246,19 @@ describe('mirror-ops', () => {
   })
 
   describe('moveNote', () => {
-    it('re-parents the page (same parent type) and does not touch the file', async () => {
+    it('re-parents the page (same parent type), refreshes both footers, and does not touch the file', async () => {
       const content = FM(`\nnotion_mirror_url: ${MIRROR_URL}`)
       const abs = await writeNote('note.md', content)
-      fetchMock.mockResolvedValueOnce(ok({ ...PAGE_RESPONSE, parent: { type: 'page_id', page_id: 'old' } })) // GET before
+      fetchMock.mockResolvedValueOnce(ok({ ...PAGE_RESPONSE, parent: { type: 'page_id', page_id: OLD_PARENT } })) // GET before
       fetchMock.mockResolvedValueOnce(ok({})) // PATCH parent
+      fetchMock.mockResolvedValueOnce(emptyChildren()) // footer refresh GET (old parent)
+      fetchMock.mockResolvedValueOnce(emptyChildren()) // footer refresh GET (new parent)
       const { moveNote } = await importOps()
       const result = await moveNote(abs, { type: 'page_id', page_id: PAGE_HEX })
-      expect(result).toEqual({ moved: true, page_id: PAGE_HEX, previous_parent: { type: 'page_id', page_id: 'old' }, new_parent: { type: 'page_id', page_id: PAGE_HEX } })
-      expect(fetchMock).toHaveBeenCalledTimes(2)
+      expect(result).toEqual({ moved: true, page_id: PAGE_HEX, previous_parent: { type: 'page_id', page_id: OLD_PARENT }, new_parent: { type: 'page_id', page_id: PAGE_HEX } })
+      const footerGets = fetchMock.mock.calls.filter((c) => String(c[0]).includes('/children')).map((c) => String(c[0]))
+      expect(footerGets.some((u) => u.includes(OLD_PARENT))).toBe(true)
+      expect(footerGets.some((u) => u.includes(PAGE_HEX))).toBe(true)
       expect(await fsp.readFile(abs, 'utf-8')).toBe(content)
     })
 
@@ -200,14 +272,30 @@ describe('mirror-ops', () => {
       await expect(moveNote(abs, { type: 'database_id', database_id: DB_ID })).rejects.toThrow(/silently ignored the parent change/)
     })
 
-    it('accepts a cross-type move that actually took effect', async () => {
+    it('accepts a cross-type move that actually took effect (refreshes only the old page parent)', async () => {
       const abs = await writeNote('note.md', FM(`\nnotion_mirror_url: ${MIRROR_URL}`))
-      fetchMock.mockResolvedValueOnce(ok({ ...PAGE_RESPONSE, parent: { type: 'page_id', page_id: 'old' } })) // GET before
+      fetchMock.mockResolvedValueOnce(ok({ ...PAGE_RESPONSE, parent: { type: 'page_id', page_id: OLD_PARENT } })) // GET before
       fetchMock.mockResolvedValueOnce(ok({})) // PATCH
       fetchMock.mockResolvedValueOnce(ok({ ...PAGE_RESPONSE, parent: { type: 'database_id', database_id: DB_ID } })) // GET after — changed
+      fetchMock.mockResolvedValueOnce(emptyChildren()) // footer refresh GET (old page parent; new database parent needs none)
       const { moveNote } = await importOps()
       const result = await moveNote(abs, { type: 'database_id', database_id: DB_ID })
       expect((result as { moved: boolean }).moved).toBe(true)
+      const footerGets = fetchMock.mock.calls.filter((c) => String(c[0]).includes('/children')).map((c) => String(c[0]))
+      expect(footerGets).toEqual([`https://api.notion.test/v1/blocks/${OLD_PARENT}/children?page_size=100`])
+    })
+
+    it('moving from a database parent to a page parent refreshes only the new parent', async () => {
+      const abs = await writeNote('note.md', FM(`\nnotion_mirror_url: ${MIRROR_URL}`))
+      fetchMock.mockResolvedValueOnce(ok({ ...PAGE_RESPONSE, parent: { type: 'database_id', database_id: DB_ID } })) // GET before (db parent)
+      fetchMock.mockResolvedValueOnce(ok({})) // PATCH
+      fetchMock.mockResolvedValueOnce(ok({ ...PAGE_RESPONSE, parent: { type: 'page_id', page_id: PAGE_HEX } })) // GET after — changed
+      fetchMock.mockResolvedValueOnce(emptyChildren()) // footer GET (new page parent only)
+      const { moveNote } = await importOps()
+      const result = await moveNote(abs, { type: 'page_id', page_id: PAGE_HEX })
+      expect((result as { moved: boolean }).moved).toBe(true)
+      const footerGets = fetchMock.mock.calls.filter((c) => String(c[0]).includes('/children')).map((c) => String(c[0]))
+      expect(footerGets).toEqual([`https://api.notion.test/v1/blocks/${PAGE_HEX}/children?page_size=100`])
     })
 
     it('throws when the note is not published', async () => {

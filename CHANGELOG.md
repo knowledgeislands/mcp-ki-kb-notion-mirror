@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+`feat: publish accepts icon/full_width/link_map; parent child-pages footer maintained automatically by publish/unpublish/move.`
+
+- `notion_mirror_publish` gains three optional args:
+  - `icon` — `{ type: "emoji", emoji }` or `{ type: "external", external: { url } }`, set in the page-create call.
+  - `full_width` (default `true`) — sets `format.page_full_width` on create; if Notion rejects the hint, the create is retried once without it (default width) and a warning is logged.
+  - `link_map` — wikilink target → mirror URL. Resolved `[[…]]` become Notion page mentions; unresolved ones render as italic text. The caller builds the map (the MCP never walks the KB).
+- **Child-pages footer (mirror-only).** Page-parented mirror pages get a "📂 Child Pages" footer of page-mention bullets, refreshed automatically after `publish` (page parent), real `unpublish` (page parent), and `move` (both old and new page parents). Identified by a sentinel `heading_2` (`📂 Child Pages`) — a future mirror→KB reader must strip it. Refreshes are serialised per parent and never fail the primary operation.
+- New modules: `src/wikilinks.ts` (pure rewrite + mention conversion), `src/footer.ts` (`buildFooterBlocks` + locked `refreshFooter`). New `notion-client` block helpers: `getBlockChildren` (paginated), `appendBlockChildren`, `deleteBlock`.
+
 ## 1.0.0
 
 `feat!: rewrite as file-aware Notion publisher (publish/unpublish/move/get by kb_path); orchestration moves to the caller.`

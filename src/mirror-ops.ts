@@ -12,14 +12,39 @@
  */
 import * as fs from 'node:fs/promises'
 import { bannerBlock } from './banner.js'
+import { refreshFooter } from './footer.js'
 import { parseFrontmatter, removeFrontmatterFields, upsertFrontmatterFields } from './frontmatter.js'
 import { bodyToBlocks, stripFrontmatter, stripLeadingH1, titleFromPath } from './markdown.js'
-import { archivePage, createPage, extractPageIdFromUrl, getPage, type NotionParent, normalizePublishedAt, setPageParent } from './notion-client.js'
+import { archivePage, createPage, extractPageIdFromUrl, getPage, type NotionIcon, type NotionParent, normalizePublishedAt, setPageParent } from './notion-client.js'
 import { getDatabaseTitleProperty } from './title-property.js'
 import { atomicWriteFile } from './utils/atomic-write.js'
 import { resolveKbNotePath } from './utils/paths.js'
+import { convertMentionPlaceholders, rewriteWikilinks } from './wikilinks.js'
 
 export const MIRROR_FIELDS = ['notion_mirror_url', 'notion_mirror_published_at'] as const
+
+/** Optional publish extras (Change 1–4): wikilink resolution, page icon, full-width. */
+export interface PublishOptions {
+  icon?: NotionIcon
+  fullWidth?: boolean
+  linkMap?: Record<string, string>
+}
+
+/** The page id of a Notion page parent, or undefined for a database/other parent. */
+const pageParentId = (parent: Record<string, unknown>): string | undefined => (parent.type === 'page_id' ? (parent.page_id as string) : undefined)
+
+/**
+ * Refresh a parent's child-pages footer without ever failing the primary op —
+ * the page is already published/moved/archived, so a flaky footer must not
+ * surface as a tool error. Warns and swallows.
+ */
+const refreshFooterSafe = async (parentPageId: string): Promise<void> => {
+  try {
+    await refreshFooter(parentPageId)
+  } catch (err) {
+    console.error(`mcp-notion-mirror: child-pages footer refresh failed for parent ${parentPageId}:`, err)
+  }
+}
 
 export type PublishResult = { url: string; page_id: string; published_at: string } | { skipped: true; existing_url: string }
 
@@ -42,7 +67,7 @@ const readNote = async (kbPath: string): Promise<{ abs: string; raw: string; fie
 }
 
 /** Publish a note under the caller-supplied `parent`, writing the URL back to frontmatter. */
-export const publishNote = async (kbPath: string, parent: NotionParent, force: boolean): Promise<PublishResult> => {
+export const publishNote = async (kbPath: string, parent: NotionParent, force: boolean, options: PublishOptions = {}): Promise<PublishResult> => {
   const { abs, raw, fields, hasFrontmatter } = await readNote(kbPath)
   if (!hasFrontmatter) throw new Error('Note has no YAML frontmatter; refusing to publish.')
 
@@ -56,18 +81,25 @@ export const publishNote = async (kbPath: string, parent: NotionParent, force: b
   }
 
   const title = titleFromPath(abs)
-  const body = stripLeadingH1(stripFrontmatter(raw))
+  // Resolve wikilinks AFTER frontmatter/H1 strip but BEFORE martian, then turn
+  // the mention placeholders martian carried through into real page mentions.
+  const body = rewriteWikilinks(stripLeadingH1(stripFrontmatter(raw)), options.linkMap ?? {})
+  const bodyBlocks = convertMentionPlaceholders(bodyToBlocks(body)) as unknown[]
   const dateStr = new Date().toISOString().slice(0, 10)
   const banner = bannerBlock(dateStr)
-  const children = banner ? [banner, ...bodyToBlocks(body)] : bodyToBlocks(body)
+  const children = banner ? [banner, ...bodyBlocks] : bodyBlocks
   if (children.length === 0) throw new Error('Nothing to publish: the note body is empty and the banner is disabled.')
 
   const titleProperty = parent.type === 'database_id' ? await getDatabaseTitleProperty(parent.database_id) : undefined
-  const page = await createPage({ parent, title, children, titleProperty })
+  const page = await createPage({ parent, title, children, titleProperty, icon: options.icon, fullWidth: options.fullWidth })
   const publishedAt = normalizePublishedAt(page.created_time)
 
   const updated = upsertFrontmatterFields(raw, { notion_mirror_url: page.url, notion_mirror_published_at: publishedAt })
   await atomicWriteFile(abs, updated)
+
+  // A new child page lands in its page parent; refresh that parent's footer.
+  // Database parents need none — the database's views already list their rows.
+  if (parent.type === 'page_id') await refreshFooterSafe(parent.page_id)
 
   return { url: page.url, page_id: page.id, published_at: publishedAt }
 }
@@ -84,9 +116,15 @@ export const unpublishNote = async (kbPath: string, dryRun: boolean): Promise<Un
     return { dry_run: true, would_archive_url: mirror, would_archive_page_id: pageId, would_clear_fields: [...MIRROR_FIELDS] }
   }
 
+  // Learn the parent before archiving so we can refresh its footer afterwards.
+  const parentId = pageParentId((await getPage(pageId)).parent)
   await archivePage(pageId)
   const cleared = removeFrontmatterFields(raw, [...MIRROR_FIELDS])
   await atomicWriteFile(abs, cleared)
+
+  // The archived child should fall out of its page parent's footer.
+  if (parentId) await refreshFooterSafe(parentId)
+
   return { archived: true, page_id: pageId, url: mirror }
 }
 
@@ -110,6 +148,12 @@ export const moveNote = async (kbPath: string, parent: NotionParent): Promise<Mo
       throw new Error('Notion silently ignored the parent change — cannot move between page-id and database-id parents. Use unpublish + publish instead.')
     }
   }
+
+  // The moved child falls out of the old parent's footer and into the new one;
+  // refresh both (database parents need no footer).
+  const oldParentId = pageParentId(before.parent)
+  if (oldParentId) await refreshFooterSafe(oldParentId)
+  if (parent.type === 'page_id') await refreshFooterSafe(parent.page_id)
 
   return { moved: true, page_id: pageId, previous_parent: before.parent, new_parent: parent }
 }

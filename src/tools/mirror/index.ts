@@ -1,7 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import { getNote, moveNote, publishNote, unpublishNote } from '../../mirror-ops.js'
-import type { NotionParent } from '../../notion-client.js'
+import type { NotionIcon, NotionParent } from '../../notion-client.js'
 import { DESTRUCTIVE_REMOTE, READ_ONLY_REMOTE, WRITE_REMOTE } from '../../utils/annotations.js'
 import { errorResult, jsonResult } from '../../utils/results.js'
 
@@ -21,11 +21,27 @@ const parentArg = z
   .discriminatedUnion('type', [z.object({ type: z.literal('database_id'), database_id: notionId }).strict(), z.object({ type: z.literal('page_id'), page_id: notionId }).strict()])
   .describe('Notion parent object, passed to Notion verbatim: { type: "database_id", database_id } or { type: "page_id", page_id }. The caller decides which.')
 
+const iconArg = z
+  .discriminatedUnion('type', [
+    z.object({ type: z.literal('emoji'), emoji: z.string().min(1).max(64) }).strict(),
+    z.object({ type: z.literal('external'), external: z.object({ url: z.string().url().max(2048) }).strict() }).strict()
+  ])
+  .describe('Notion page icon, passed verbatim: { type: "emoji", emoji } or { type: "external", external: { url } }. Omit for no icon.')
+
+const linkMapArg = z
+  .record(z.string().max(1024), z.string().max(2048))
+  .describe(
+    "Wikilink resolution: maps a [[target]] string to that note's mirror URL. Resolved [[…]] become Notion @mentions; unresolved ones render as italic text. Omit/empty → all wikilinks italic."
+  )
+
 const publishInput = z
   .object({
     kb_path: kbPathArg,
     parent: parentArg,
-    force: z.boolean().default(false).describe('Re-publish even if notion_mirror_url is already set. Archives the existing mirror page first, then creates a fresh one (the URL changes).')
+    force: z.boolean().default(false).describe('Re-publish even if notion_mirror_url is already set. Archives the existing mirror page first, then creates a fresh one (the URL changes).'),
+    icon: iconArg.optional(),
+    full_width: z.boolean().default(true).describe('Lay the page out full-width (default true). No-op if the Notion API rejects the hint — the page lands at default width.'),
+    link_map: linkMapArg.optional()
   })
   .strict()
 
@@ -53,10 +69,15 @@ Args:
   - kb_path (string, required): path to the KB markdown note.
   - parent (object, required): { type: "database_id", database_id } or { type: "page_id", page_id }. Passed to Notion verbatim. A database parent must be a wiki database; a page parent creates a child page.
   - force (boolean, default false): re-publish even if already mirrored. Archives the old mirror page first, then creates a new one (the URL changes).
+  - icon (object, optional): { type: "emoji", emoji } or { type: "external", external: { url } }. Page icon, passed to Notion verbatim. Omit for none.
+  - full_width (boolean, default true): lay the page out full-width. No-op if Notion rejects the hint.
+  - link_map (object, optional): { "[[target]] text": "mirror url" }. Resolved wikilinks become Notion @mentions; unresolved ones render italic. Omit/empty → all italic.
 
 Returns:
   - On publish: { url, page_id, published_at }.
   - On skip (already mirrored, no force): { skipped: true, existing_url }.
+
+Side effect: when parent.type is "page_id", the parent's "📂 Child Pages" footer is refreshed after the page is created (mirror-only; never written to the KB).
 
 Errors:
   - "Note has no YAML frontmatter; refusing to publish."
@@ -65,9 +86,9 @@ Errors:
       inputSchema: publishInput,
       annotations: WRITE_REMOTE
     },
-    async ({ kb_path, parent, force }) => {
+    async ({ kb_path, parent, force, icon, full_width, link_map }) => {
       try {
-        return jsonResult(await publishNote(kb_path, parent as NotionParent, force))
+        return jsonResult(await publishNote(kb_path, parent as NotionParent, force, { icon: icon as NotionIcon | undefined, fullWidth: full_width, linkMap: link_map }))
       } catch (err) {
         return errorResult('publishing note', err)
       }

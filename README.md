@@ -27,21 +27,28 @@ A KB convention change (a new exclusion rule, a folder-layout shift, banner-text
 
 ## Tools
 
-### `notion_mirror_publish(kb_path, parent, force?)` — write
+### `notion_mirror_publish(kb_path, parent, force?, icon?, full_width?, link_map?)` — write
 
 Mirror one note under `parent` and record the URL in its frontmatter.
 
 - `kb_path` (string) — the KB markdown note.
 - `parent` (object) — `{ type: "database_id", database_id }` or `{ type: "page_id", page_id }`, passed to Notion verbatim. A database parent creates a wiki row; a page parent creates a child page.
 - `force` (boolean, default `false`) — re-publish even if already mirrored. Archives the old mirror page first, then creates a new one (the URL changes).
+- `icon` (object, optional) — `{ type: "emoji", emoji }` or `{ type: "external", external: { url } }`, passed to Notion verbatim. Omit for no icon.
+- `full_width` (boolean, default `true`) — lay the page out full-width. No-op if the Notion API rejects the hint (the page lands at default width; a warning is logged once).
+- `link_map` (object, optional) — maps a `[[target]]` string to that note's mirror URL. Resolved wikilinks become Notion `@`mentions; unresolved ones render as italic text. Omit/empty → all wikilinks italic. The MCP does not build this map — the orchestrator does (see [Wikilinks](#wikilinks-link_map)).
 
 On publish returns `{ url, page_id, published_at }`. When already mirrored and `force` is false, returns `{ skipped: true, existing_url }`. Errors `Nothing to publish …` if the body is empty and the banner is disabled.
+
+**Side effect:** when `parent.type` is `"page_id"`, the parent's child-pages footer is refreshed after the page is created (see [Child-pages footer](#child-pages-footer)).
 
 ### `notion_mirror_move(kb_path, parent)` — write
 
 Re-parent the already-published mirror page to `parent`. Content and URL are unchanged; no frontmatter change. Returns `{ moved: true, page_id, previous_parent, new_parent }`.
 
 > **Caveat:** Notion cannot move a page between a `page_id` parent and a `database_id` parent — `PATCH /v1/pages` silently ignores it. This tool detects that case and errors clearly; use `unpublish` + `publish` instead.
+
+**Side effect:** both the old and new parents' child-pages footers are refreshed (page parents only).
 
 ### `notion_mirror_unpublish(kb_path, dry_run?)` — destructive
 
@@ -53,9 +60,29 @@ Dry run returns `{ dry_run: true, would_archive_url, would_archive_page_id, woul
 
 > **Caveat:** archiving cascade-archives descendant pages on the Notion side. This tool clears only the one note's frontmatter; descendants still point at now-archived pages (caller's responsibility).
 
+**Side effect:** when `dry_run` is false and the archived page had a page parent, that parent's child-pages footer is refreshed.
+
 ### `notion_mirror_get(kb_path)` — read
 
 Fetch the live Notion page in `notion_mirror_url`. Pure read — no Notion mutation, no file change. Returns `{ id, parent, title, created_time, last_edited_time, archived, url }`, or `{ exists: false, reason: "not-published" }` when the note has no mirror URL.
+
+## Wikilinks (`link_map`)
+
+KB notes use `[[target]]` / `[[target|display]]` wikilinks. Pass `link_map` to `publish` — a map from the wikilink target string to that note's mirror URL — and each resolved `[[…]]` becomes a Notion page `@`mention; unresolved targets render as italic text (so a broken reference is visible but not clickable). The visible text is the explicit `display`, or the target's basename (last path segment, sans `.md`).
+
+The MCP does **not** build the map — it doesn't walk the KB. The orchestrator typically walks every KB note with a `notion_mirror_url` once and passes the relevant slice on each publish call. Omitting `link_map` (or passing `{}`) renders all wikilinks italic.
+
+## Child-pages footer
+
+Every page-parented mirror page gets a **"📂 Child Pages"** footer listing its immediate child pages as Notion `@`mentions. It's how a parent's body surfaces its children (the wiki sidebar shows the tree; the page body doesn't otherwise). Footer maintenance is automatic — there is no separate tool:
+
+- after `publish` under a `page_id` parent → that parent's footer is refreshed;
+- after a real `unpublish` of a page-parented child → that parent's footer is refreshed;
+- after `move` → both the old and new page parents' footers are refreshed.
+
+Database parents need no footer (their views already list rows). Footer refreshes are serialised per parent and never fail the primary operation (a footer error is logged and swallowed).
+
+> **Mirror-only / sentinel.** The footer is **never** written into the KB source. It begins with a sentinel `heading_2` whose text is exactly `📂 Child Pages`. Any future "read the mirror back into the KB" path **must** recognise this sentinel and strip it (and everything Notion lists under it as footer bullets) before importing.
 
 ## Orchestrator example
 
@@ -80,8 +107,18 @@ async function publishOne(kb_path: string) {
     ? { type: "page_id", page_id: extractPageId(parentMirror)! } // nest under the parent page
     : { type: "database_id", database_id: WIKI_DB_ID }; // top of the tree
 
-  // MCP does the rest — markdown, banner, frontmatter write-back.
-  await callTool("notion_mirror_publish", { kb_path, parent });
+  // Optional extras the caller computes from the KB:
+  const fm = readFrontmatter(kb_path);
+  const icon = fm.icon?.startsWith("http")
+    ? { type: "external", external: { url: fm.icon } }
+    : fm.icon
+      ? { type: "emoji", emoji: fm.icon }
+      : undefined;
+  const link_map = buildLinkMapForOutboundWikilinks(kb_path); // { "[[target]]": mirrorUrl }
+
+  // MCP does the rest — markdown, banner, wikilink mentions, frontmatter write-back,
+  // and (for page parents) refreshing the parent's child-pages footer.
+  await callTool("notion_mirror_publish", { kb_path, parent, icon, link_map });
 }
 ```
 
