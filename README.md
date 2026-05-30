@@ -27,20 +27,33 @@ A KB convention change (a new exclusion rule, a folder-layout shift, banner-text
 
 ## Tools
 
-### `notion_mirror_publish(kb_path, parent, force?, icon?, full_width?, link_map?)` — write
+### `notion_mirror_publish(kb_path, parent, mode?, icon?, full_width?, link_map?)` — write
 
 Mirror one note under `parent` and record the URL in its frontmatter.
 
 - `kb_path` (string) — the KB markdown note.
 - `parent` (object) — `{ type: "database_id", database_id }` or `{ type: "page_id", page_id }`, passed to Notion verbatim. A database parent creates a wiki row; a page parent creates a child page.
-- `force` (boolean, default `false`) — re-publish even if already mirrored. Archives the old mirror page first, then creates a new one (the URL changes).
+- `mode` (`"create"` | `"replace"` | `"force"`, default `"create"`) — how to handle an already-mirrored note (see [When to use which mode](#when-to-use-which-mode)). A non-mirrored note is created in every mode.
+- `force` (boolean, deprecated) — legacy alias for `mode: "force"`. Prefer `mode`; `force` will be dropped.
 - `icon` (object, optional) — `{ type: "emoji", emoji }` or `{ type: "external", external: { url } }`, passed to Notion verbatim. Omit for no icon.
 - `full_width` (boolean, default `true`) — lay the page out full-width. No-op if the Notion API rejects the hint (the page lands at default width; a warning is logged once).
 - `link_map` (object, optional) — maps a `[[target]]` string to that note's mirror URL. Resolved wikilinks become Notion `@`mentions; unresolved ones render as italic text. Omit/empty → all wikilinks italic. The MCP does not build this map — the orchestrator does (see [Wikilinks](#wikilinks-link_map)).
 
-On publish returns `{ url, page_id, published_at }`. When already mirrored and `force` is false, returns `{ skipped: true, existing_url }`. Errors `Nothing to publish …` if the body is empty and the banner is disabled.
+Returns `{ url, page_id, published_at, mode }`. For `replace`, `url` equals the pre-existing `notion_mirror_url`. When already mirrored in `create` mode, returns `{ skipped: true, existing_url }`. Errors `Nothing to publish …` if the body is empty and the banner is disabled.
 
-**Side effect:** when `parent.type` is `"page_id"`, the parent's child-pages footer is refreshed after the page is created (see [Child-pages footer](#child-pages-footer)).
+**Side effect:** when `parent.type` is `"page_id"`, the parent's child-pages heading is refreshed after the page is created/updated (see [Child-pages footer](#child-pages-footer)).
+
+#### When to use which mode
+
+| `mode`               | Already mirrored?                                             | URL after   |
+| -------------------- | ------------------------------------------------------------- | ----------- |
+| `"create"` (default) | Skip — `{ skipped: true, existing_url }`, no Notion call.     | unchanged   |
+| `"replace"`          | Update the page's body + properties **in place** (see below). | **kept**    |
+| `"force"`            | Archive the old page, create a new one.                       | **changes** |
+
+`replace` is for re-rendering a page without breaking inbound links — e.g. the second pass of wikilink resolution (see [Two-pass publishing](#two-pass-publishing-orchestrator)). It deletes the old body blocks and appends the new body **above** the page's native child links, then re-labels them with the `Child Pages` heading.
+
+> **Comment-loss caveat.** `replace` is body-destructive: Notion attaches **block-level comments** to specific blocks, which `replace` deletes. Page-level comments and child pages are preserved. Fold any block comments back into the KB before a replace pass — the canonical KB body always wins.
 
 ### `notion_mirror_move(kb_path, parent)` — write
 
@@ -123,6 +136,25 @@ async function publishOne(kb_path: string) {
 ```
 
 Publish parents before children (the caller orders the loop). To re-home a page published flat by an earlier version, call `notion_mirror_move` once per page with the new parent.
+
+### Two-pass publishing (orchestrator)
+
+Wikilink `@`mentions need every target's URL to exist first, and those URLs must stay stable — so resolution is a second pass using `mode: "replace"` (which keeps URLs):
+
+```text
+Pass 1 — initial publish (URLs don't exist yet; wikilinks render italic)
+  for each note in tree order:
+    notion_mirror_publish({ kb_path, parent, mode: "create", icon })
+  → every note now has a stable notion_mirror_url
+
+Pass 2 — wikilink resolution (URLs are stable; any order)
+  build link_map: { "[[target]]" → notion_mirror_url } from every note
+  for each note:
+    notion_mirror_publish({ kb_path, parent, mode: "replace", icon, link_map })
+  → every [[X]] is now an @mention pointing at the right page
+```
+
+`replace` updates the body in place, so the `@`mentions other notes make to this one keep resolving. (Using `force` here would change every URL and the round-trip would never converge.)
 
 ## Access levels
 

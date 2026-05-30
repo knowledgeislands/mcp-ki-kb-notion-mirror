@@ -38,7 +38,13 @@ const publishInput = z
   .object({
     kb_path: kbPathArg,
     parent: parentArg,
-    force: z.boolean().default(false).describe('Re-publish even if notion_mirror_url is already set. Archives the existing mirror page first, then creates a fresh one (the URL changes).'),
+    mode: z
+      .enum(['create', 'replace', 'force'])
+      .optional()
+      .describe(
+        'create (default): skip if already mirrored, else create. replace: update the existing page body+properties in place, preserving its URL. force: archive the existing page and create a new one (URL changes).'
+      ),
+    force: z.boolean().optional().describe('Deprecated: legacy alias for mode:"force". Prefer `mode`.'),
     icon: iconArg.optional(),
     full_width: z.boolean().default(true).describe('Lay the page out full-width (default true). No-op if the Notion API rejects the hint — the page lands at default width.'),
     link_map: linkMapArg.optional()
@@ -68,16 +74,21 @@ export const registerMirrorTools = (server: McpServer): void => {
 Args:
   - kb_path (string, required): path to the KB markdown note.
   - parent (object, required): { type: "database_id", database_id } or { type: "page_id", page_id }. Passed to Notion verbatim. A database parent must be a wiki database; a page parent creates a child page.
-  - force (boolean, default false): re-publish even if already mirrored. Archives the old mirror page first, then creates a new one (the URL changes).
+  - mode ("create" | "replace" | "force", default "create"): how to handle an already-mirrored note.
+    - create: skip (no Notion call), return { skipped: true, existing_url }.
+    - replace: update the existing page's body + properties IN PLACE, preserving its URL (enables stable @mention resolution across passes). Body-destructive: deletes the old body blocks (and any block-level comments on them); child pages and page-level comments are preserved.
+    - force: archive the existing page and create a new one — the URL CHANGES.
+    A non-mirrored note is created in every mode.
+  - force (boolean, deprecated): legacy alias for mode:"force". Prefer mode.
   - icon (object, optional): { type: "emoji", emoji } or { type: "external", external: { url } }. Page icon, passed to Notion verbatim. Omit for none.
   - full_width (boolean, default true): lay the page out full-width. No-op if Notion rejects the hint.
   - link_map (object, optional): { "[[target]] text": "mirror url" }. Resolved wikilinks become Notion @mentions; unresolved ones render italic. Omit/empty → all italic.
 
 Returns:
-  - On publish: { url, page_id, published_at }.
-  - On skip (already mirrored, no force): { skipped: true, existing_url }.
+  - On publish/replace/force: { url, page_id, published_at, mode }. For replace, url equals the pre-existing notion_mirror_url.
+  - On skip (already mirrored, mode "create"): { skipped: true, existing_url }.
 
-Side effect: when parent.type is "page_id", the parent's "📂 Child Pages" footer is refreshed after the page is created (mirror-only; never written to the KB).
+Side effect: when parent.type is "page_id", the parent's "Child Pages" heading is refreshed (mirror-only; never written to the KB).
 
 Errors:
   - "Note has no YAML frontmatter; refusing to publish."
@@ -86,9 +97,9 @@ Errors:
       inputSchema: publishInput,
       annotations: WRITE_REMOTE
     },
-    async ({ kb_path, parent, force, icon, full_width, link_map }) => {
+    async ({ kb_path, parent, mode, force, icon, full_width, link_map }) => {
       try {
-        return jsonResult(await publishNote(kb_path, parent as NotionParent, force, { icon: icon as NotionIcon | undefined, fullWidth: full_width, linkMap: link_map }))
+        return jsonResult(await publishNote(kb_path, parent as NotionParent, { mode, force, icon: icon as NotionIcon | undefined, fullWidth: full_width, linkMap: link_map }))
       } catch (err) {
         return errorResult('publishing note', err)
       }

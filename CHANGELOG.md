@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+`feat: publish gains mode: "replace" — in-place body+properties update that preserves the page URL. Enables stable @mention resolution across multiple passes. force boolean kept as backwards-compat alias for mode: "force".`
+
+- `notion_mirror_publish` replaces the `force` boolean with a tri-state `mode`:
+  - `create` (default) — skip if already mirrored, else create.
+  - `replace` — update an existing page's body + properties **in place**, preserving its URL. Deletes the old body blocks and re-appends the new body above the page's native child links (child pages preserved); updates `notion_mirror_published_at` but not `notion_mirror_url`. If the page is re-parented, re-issues the parent change.
+  - `force` — archive the existing page and create a new one (URL changes).
+  - `force: true` is kept as a deprecated alias for `mode: "force"` (warns).
+- New `notion-client` calls: `updatePage` (PATCH page properties/icon/parent/full-width) and `appendBlockChildren` now returns the created block ids and accepts an `after` anchor. Full-width handling factored into a shared `pageWriteRequest` used by both create and update.
+- Caveat: `replace` is body-destructive — block-level comments on deleted blocks are lost (page-level comments and child pages are preserved). Documented in the tool description and README.
+
 `feat: publish accepts icon/full_width/link_map; parent child-pages footer maintained automatically by publish/unpublish/move.`
 
 - `notion_mirror_publish` gains three optional args:

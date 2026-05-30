@@ -115,6 +115,12 @@ export interface CreatedPage {
   created_time: string
 }
 
+export interface UpdatedPage {
+  id: string
+  url: string
+  last_edited_time: string
+}
+
 /**
  * Build the `properties` object for a page create. Under a database parent the
  * title lives in the database's title-typed property (its name varies per
@@ -133,9 +139,28 @@ const titleProperties = (parent: NotionParent, title: string, titleProperty: str
 }
 
 // `format.page_full_width` is not in the documented public schema; Notion has
-// historically accepted it on POST. If a create is rejected because of it we
-// learn that once, warn, and stop sending it for the rest of the process.
+// historically accepted it on POST/PATCH. If a write is rejected because of it
+// we learn that once, warn, and stop sending it for the rest of the process.
 let fullWidthUnsupported = false
+
+/**
+ * POST or PATCH a page with an optional full-width hint. If Notion rejects the
+ * hint with a 400, retry once without it (the page lands at default width) and
+ * warn — so a write never fails because of `format.page_full_width`.
+ */
+const pageWriteRequest = async (method: 'POST' | 'PATCH', apiPath: string, baseBody: Record<string, unknown>, fullWidth: boolean): Promise<NotionPageResponse> => {
+  const wantFullWidth = fullWidth && !fullWidthUnsupported
+  try {
+    return await request<NotionPageResponse>(method, apiPath, wantFullWidth ? { ...baseBody, format: { page_full_width: true } } : baseBody)
+  } catch (err) {
+    if (wantFullWidth && err instanceof NotionApiError && err.status === 400) {
+      fullWidthUnsupported = true
+      console.error('mcp-notion-mirror: Notion rejected the full-width hint (format.page_full_width); writing at default width from now on.')
+      return await request<NotionPageResponse>(method, apiPath, baseBody)
+    }
+    throw err
+  }
+}
 
 /**
  * Create a page under `parent`. Notion caps `children` at 100 per request, so
@@ -145,33 +170,30 @@ let fullWidthUnsupported = false
  * `titleProperty` is required for a database parent and ignored for a page
  * parent (where the title property is always the reserved `title`). `icon` (if
  * given) and full-width formatting are set in the SAME create call — never a
- * separate PATCH. If Notion rejects the full-width hint, the create is retried
- * once without it (the page lands at default width) and a warning is logged.
+ * separate PATCH.
  */
 export const createPage = async (params: { parent: NotionParent; title: string; children: unknown[]; titleProperty?: string; icon?: NotionIcon; fullWidth?: boolean }): Promise<CreatedPage> => {
   const { parent, title, children, titleProperty, icon, fullWidth = true } = params
-  const head = children.slice(0, MAX_CHILDREN_PER_REQUEST)
-  const base: Record<string, unknown> = { parent, properties: titleProperties(parent, title, titleProperty), children: head }
+  const base: Record<string, unknown> = { parent, properties: titleProperties(parent, title, titleProperty), children: children.slice(0, MAX_CHILDREN_PER_REQUEST) }
   if (icon) base.icon = icon
-
-  const wantFullWidth = fullWidth && !fullWidthUnsupported
-  let page: NotionPageResponse
-  try {
-    page = await request<NotionPageResponse>('POST', '/v1/pages', wantFullWidth ? { ...base, format: { page_full_width: true } } : base)
-  } catch (err) {
-    if (wantFullWidth && err instanceof NotionApiError && err.status === 400) {
-      fullWidthUnsupported = true
-      console.error('mcp-notion-mirror: Notion rejected the full-width hint (format.page_full_width); publishing at default width from now on.')
-      page = await request<NotionPageResponse>('POST', '/v1/pages', base)
-    } else {
-      throw err
-    }
-  }
-
+  const page = await pageWriteRequest('POST', '/v1/pages', base, fullWidth)
   for (let i = MAX_CHILDREN_PER_REQUEST; i < children.length; i += MAX_CHILDREN_PER_REQUEST) {
     await appendBlockChildren(page.id, children.slice(i, i + MAX_CHILDREN_PER_REQUEST))
   }
   return { id: page.id, url: page.url, created_time: page.created_time }
+}
+
+/**
+ * Update an existing page's parent, title property, icon, and full-width
+ * formatting in place (single PATCH). Does NOT touch the page body — callers
+ * replace block children separately. Returns the page's id/url/last_edited_time.
+ */
+export const updatePage = async (pageId: string, params: { parent: NotionParent; title: string; titleProperty?: string; icon?: NotionIcon; fullWidth?: boolean }): Promise<UpdatedPage> => {
+  const { parent, title, titleProperty, icon, fullWidth = true } = params
+  const base: Record<string, unknown> = { parent, properties: titleProperties(parent, title, titleProperty) }
+  if (icon) base.icon = icon
+  const page = await pageWriteRequest('PATCH', `/v1/pages/${normalizeId(pageId)}`, base, fullWidth)
+  return { id: page.id, url: page.url, last_edited_time: page.last_edited_time }
 }
 
 /** Archive (soft-delete) a page. Idempotent — archiving an archived page is a no-op success. */
@@ -258,10 +280,15 @@ export const getBlockChildren = async (blockId: string): Promise<NotionBlock[]> 
   return all
 }
 
-/** Append children to a block/page. Pass `after` (a sibling block id) to position the new blocks right after it instead of at the end. */
-export const appendBlockChildren = async (blockId: string, children: unknown[], after?: string): Promise<void> => {
+/**
+ * Append children to a block/page, returning the created block ids (in order).
+ * Pass `after` (a sibling block id) to position the new blocks right after it
+ * instead of at the end.
+ */
+export const appendBlockChildren = async (blockId: string, children: unknown[], after?: string): Promise<string[]> => {
   const body = after === undefined ? { children } : { children, after: normalizeId(after) }
-  await request('PATCH', `/v1/blocks/${normalizeId(blockId)}/children`, body)
+  const resp = await request<{ results?: Array<{ id: string }> }>('PATCH', `/v1/blocks/${normalizeId(blockId)}/children`, body)
+  return (resp.results ?? []).map((b) => b.id)
 }
 
 /** Delete (archive) a single block. */

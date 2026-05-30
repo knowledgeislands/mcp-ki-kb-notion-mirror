@@ -15,16 +15,36 @@ import { bannerBlock } from './banner.js'
 import { refreshFooter } from './footer.js'
 import { parseFrontmatter, removeFrontmatterFields, upsertFrontmatterFields } from './frontmatter.js'
 import { bodyToBlocks, stripFrontmatter, stripLeadingH1, titleFromPath } from './markdown.js'
-import { archivePage, createPage, extractPageIdFromUrl, getPage, type NotionIcon, type NotionParent, normalizePublishedAt, setPageParent } from './notion-client.js'
+import {
+  appendBlockChildren,
+  archivePage,
+  createPage,
+  deleteBlock,
+  extractPageIdFromUrl,
+  getBlockChildren,
+  getPage,
+  type NotionIcon,
+  type NotionParent,
+  normalizePublishedAt,
+  setPageParent,
+  updatePage
+} from './notion-client.js'
 import { getDatabaseTitleProperty } from './title-property.js'
 import { atomicWriteFile } from './utils/atomic-write.js'
 import { resolveKbNotePath } from './utils/paths.js'
 import { convertMentionPlaceholders, rewriteWikilinks } from './wikilinks.js'
 
 export const MIRROR_FIELDS = ['notion_mirror_url', 'notion_mirror_published_at'] as const
+const MAX_CHILDREN_PER_REQUEST = 100
 
-/** Optional publish extras (Change 1–4): wikilink resolution, page icon, full-width. */
+/** Publish modes (Change in ENHANCEMENT-SPEC-02). `create` skips if mirrored; `replace` updates in place (URL preserved); `force` archives + recreates (URL changes). */
+export type PublishMode = 'create' | 'replace' | 'force'
+
+/** Optional publish extras: mode, legacy force alias, wikilink resolution, page icon, full-width. */
 export interface PublishOptions {
+  mode?: PublishMode
+  /** @deprecated legacy alias for `mode: "force"`. */
+  force?: boolean
   icon?: NotionIcon
   fullWidth?: boolean
   linkMap?: Record<string, string>
@@ -46,7 +66,7 @@ const refreshFooterSafe = async (parentPageId: string): Promise<void> => {
   }
 }
 
-export type PublishResult = { url: string; page_id: string; published_at: string } | { skipped: true; existing_url: string }
+export type PublishResult = { url: string; page_id: string; published_at: string; mode: PublishMode } | { skipped: true; existing_url: string }
 
 export type UnpublishResult =
   | { archived: true; page_id: string; url: string }
@@ -66,42 +86,90 @@ const readNote = async (kbPath: string): Promise<{ abs: string; raw: string; fie
   return { abs, raw, fields, hasFrontmatter }
 }
 
-/** Publish a note under the caller-supplied `parent`, writing the URL back to frontmatter. */
-export const publishNote = async (kbPath: string, parent: NotionParent, force: boolean, options: PublishOptions = {}): Promise<PublishResult> => {
+/**
+ * Replace a page's body in place, preserving its native `child_page` blocks.
+ * The new body is inserted immediately before the first child page (so it stays
+ * above the children), then the old non-child blocks are deleted. Notion's
+ * append-only API can't reorder, hence the insert-then-delete dance.
+ */
+const replaceBody = async (pageId: string, children: unknown[]): Promise<void> => {
+  const blocks = await getBlockChildren(pageId)
+  // Anchor = the last block before the first child page (end of the old body).
+  let anchor: string | undefined
+  for (const block of blocks) {
+    if (block.type === 'child_page') break
+    anchor = block.id
+  }
+  for (let i = 0; i < children.length; i += MAX_CHILDREN_PER_REQUEST) {
+    const ids = await appendBlockChildren(pageId, children.slice(i, i + MAX_CHILDREN_PER_REQUEST), anchor)
+    anchor = ids[ids.length - 1]
+  }
+  // Remove the old body + old footer heading, sparing real sub-pages.
+  for (const block of blocks) {
+    if (block.type !== 'child_page') await deleteBlock(block.id)
+  }
+}
+
+/**
+ * Publish a note under the caller-supplied `parent`.
+ * - `create` (default): skip if already mirrored, else create.
+ * - `replace`: update an existing page's body + properties in place (URL kept), else create.
+ * - `force`: archive the existing page and create a new one (URL changes), else create.
+ * `force: true` is a legacy alias for `mode: "force"`.
+ */
+export const publishNote = async (kbPath: string, parent: NotionParent, options: PublishOptions = {}): Promise<PublishResult> => {
+  const mode: PublishMode = options.mode ?? (options.force ? 'force' : 'create')
+  if (options.force && options.mode === undefined) {
+    console.error('mcp-notion-mirror: `force: true` is deprecated; pass `mode: "force"` instead.')
+  }
+
   const { abs, raw, fields, hasFrontmatter } = await readNote(kbPath)
   if (!hasFrontmatter) throw new Error('Note has no YAML frontmatter; refusing to publish.')
 
   const existing = fields.notion_mirror_url
-  if (existing && !force) return { skipped: true, existing_url: existing }
-
-  if (existing && force) {
-    const oldId = extractPageIdFromUrl(existing)
-    // Archive the stale mirror first, but continue even if it's already gone.
-    if (oldId) await archivePage(oldId).catch(() => undefined)
-  }
+  if (existing && mode === 'create') return { skipped: true, existing_url: existing }
 
   const title = titleFromPath(abs)
   // Resolve wikilinks AFTER frontmatter/H1 strip but BEFORE martian, then turn
   // the mention placeholders martian carried through into real page mentions.
   const body = rewriteWikilinks(stripLeadingH1(stripFrontmatter(raw)), options.linkMap ?? {})
   const bodyBlocks = convertMentionPlaceholders(bodyToBlocks(body)) as unknown[]
-  const dateStr = new Date().toISOString().slice(0, 10)
-  const banner = bannerBlock(dateStr)
+  const banner = bannerBlock(new Date().toISOString().slice(0, 10))
   const children = banner ? [banner, ...bodyBlocks] : bodyBlocks
   if (children.length === 0) throw new Error('Nothing to publish: the note body is empty and the banner is disabled.')
 
   const titleProperty = parent.type === 'database_id' ? await getDatabaseTitleProperty(parent.database_id) : undefined
+
+  // In-place update: keep the URL, refresh body + properties.
+  if (existing && mode === 'replace') {
+    const pageId = extractPageIdFromUrl(existing)
+    if (!pageId) throw new Error(`Could not extract a 32-hex page id from notion_mirror_url: ${existing}`)
+    const page = await updatePage(pageId, { parent, title, titleProperty, icon: options.icon, fullWidth: options.fullWidth })
+    await replaceBody(pageId, children)
+    const publishedAt = normalizePublishedAt(page.last_edited_time)
+    await atomicWriteFile(abs, upsertFrontmatterFields(raw, { notion_mirror_published_at: publishedAt }))
+    // Body replace cleared this page's footer heading; regenerate it. Refresh the
+    // parent's footer too in case `replace` re-parented the page.
+    await refreshFooterSafe(pageId)
+    if (parent.type === 'page_id') await refreshFooterSafe(parent.page_id)
+    return { url: existing, page_id: pageId, published_at: publishedAt, mode }
+  }
+
+  // force against an existing mirror: archive it first, then create a fresh page.
+  if (existing && mode === 'force') {
+    const oldId = extractPageIdFromUrl(existing)
+    if (oldId) await archivePage(oldId).catch(() => undefined)
+  }
+
   const page = await createPage({ parent, title, children, titleProperty, icon: options.icon, fullWidth: options.fullWidth })
   const publishedAt = normalizePublishedAt(page.created_time)
-
-  const updated = upsertFrontmatterFields(raw, { notion_mirror_url: page.url, notion_mirror_published_at: publishedAt })
-  await atomicWriteFile(abs, updated)
+  await atomicWriteFile(abs, upsertFrontmatterFields(raw, { notion_mirror_url: page.url, notion_mirror_published_at: publishedAt }))
 
   // A new child page lands in its page parent; refresh that parent's footer.
   // Database parents need none — the database's views already list their rows.
   if (parent.type === 'page_id') await refreshFooterSafe(parent.page_id)
 
-  return { url: page.url, page_id: page.id, published_at: publishedAt }
+  return { url: page.url, page_id: page.id, published_at: publishedAt, mode }
 }
 
 /** Archive the note's mirror page and clear the two mirror fields. Dry-run by default. */
