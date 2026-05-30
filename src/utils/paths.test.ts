@@ -5,11 +5,9 @@ import * as path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 let kbRoot: string
-let pillars: string
 
 const seedRequired = () => {
   process.env.MCP_NOTION_MIRROR_TOKEN = 'ntn_placeholder'
-  process.env.MCP_NOTION_MIRROR_WIKI_DATABASE_ID = '00000000000000000000000000000000'
 }
 
 const importPaths = () => import('./paths.js')
@@ -17,9 +15,8 @@ const real = (p: string) => fs.realpathSync(p)
 
 beforeEach(async () => {
   kbRoot = await fsp.mkdtemp(path.join(os.tmpdir(), 'mcp-notion-mirror-paths-'))
-  pillars = path.join(kbRoot, 'Pillars')
-  await fsp.mkdir(path.join(pillars, 'sub'), { recursive: true })
-  await fsp.writeFile(path.join(pillars, 'sub', 'note.md'), 'x')
+  await fsp.mkdir(path.join(kbRoot, 'sub'), { recursive: true })
+  await fsp.writeFile(path.join(kbRoot, 'sub', 'note.md'), 'x')
   vi.resetModules()
   seedRequired()
 })
@@ -29,44 +26,25 @@ afterEach(async () => {
   delete process.env.MCP_NOTION_MIRROR_KB_ROOT
 })
 
-describe('pillarsRootForNote', () => {
-  it('returns the realpath of KB_ROOT/Pillars when KB_ROOT is set', async () => {
-    process.env.MCP_NOTION_MIRROR_KB_ROOT = kbRoot
-    vi.resetModules()
-    const { pillarsRootForNote } = await importPaths()
-    expect(pillarsRootForNote(path.join(pillars, 'sub', 'note.md'))).toBe(real(pillars))
-  })
-
-  it('derives the Pillars ancestor from the note path when KB_ROOT is unset', async () => {
-    const { pillarsRootForNote } = await importPaths()
-    expect(pillarsRootForNote('/some/kb/Pillars/Engineering/Bioweave/Note.md')).toBe('/some/kb/Pillars')
-  })
-
-  it('throws when KB_ROOT is unset and the path has no Pillars segment', async () => {
-    const { pillarsRootForNote, KbPathError } = await importPaths()
-    expect(() => pillarsRootForNote('/some/kb/Other/Note.md')).toThrow(KbPathError)
-  })
-})
-
 describe('resolveKbNotePath (KB_ROOT set)', () => {
   beforeEach(() => {
     process.env.MCP_NOTION_MIRROR_KB_ROOT = kbRoot
     vi.resetModules()
   })
 
-  it('resolves a relative path under Pillars to the note realpath', async () => {
+  it('resolves a relative path under the root to the note realpath', async () => {
     const { resolveKbNotePath } = await importPaths()
-    expect(resolveKbNotePath('Pillars/sub/note.md')).toBe(real(path.join(pillars, 'sub', 'note.md')))
+    expect(resolveKbNotePath('sub/note.md')).toBe(real(path.join(kbRoot, 'sub', 'note.md')))
   })
 
-  it('accepts an absolute path under Pillars', async () => {
+  it('accepts an absolute path under the root', async () => {
     const { resolveKbNotePath } = await importPaths()
-    expect(resolveKbNotePath(path.join(pillars, 'sub', 'note.md'))).toBe(real(path.join(pillars, 'sub', 'note.md')))
+    expect(resolveKbNotePath(path.join(kbRoot, 'sub', 'note.md'))).toBe(real(path.join(kbRoot, 'sub', 'note.md')))
   })
 
   it('rejects ".." segments', async () => {
     const { resolveKbNotePath, KbPathError } = await importPaths()
-    expect(() => resolveKbNotePath('Pillars/../etc/passwd')).toThrow(KbPathError)
+    expect(() => resolveKbNotePath('../etc/passwd')).toThrow(KbPathError)
   })
 
   it('rejects an empty path', async () => {
@@ -74,86 +52,37 @@ describe('resolveKbNotePath (KB_ROOT set)', () => {
     expect(() => resolveKbNotePath('   ')).toThrow(KbPathError)
   })
 
-  it('rejects an absolute path outside Pillars (lexical confinement)', async () => {
+  it('rejects an absolute path outside the root (lexical confinement)', async () => {
     const { resolveKbNotePath } = await importPaths()
     expect(() => resolveKbNotePath('/etc/hosts')).toThrow(/escapes the allowed KB root/)
   })
 
-  it('rejects a symlink that escapes Pillars (realpath confinement)', async () => {
-    const outside = path.join(kbRoot, 'outside')
-    await fsp.mkdir(outside, { recursive: true })
-    await fsp.symlink(outside, path.join(pillars, 'link'))
-    const { resolveKbNotePath } = await importPaths()
-    expect(() => resolveKbNotePath('Pillars/link/escaped.md')).toThrow(/escapes the allowed KB root/)
+  it('rejects a symlink that escapes the root (realpath confinement)', async () => {
+    const outsideParent = await fsp.mkdtemp(path.join(os.tmpdir(), 'mcp-notion-mirror-outside-'))
+    try {
+      await fsp.symlink(outsideParent, path.join(kbRoot, 'link'))
+      const { resolveKbNotePath } = await importPaths()
+      expect(() => resolveKbNotePath('link/escaped.md')).toThrow(/escapes the allowed KB root/)
+    } finally {
+      await fsp.rm(outsideParent, { recursive: true, force: true })
+    }
   })
 })
 
 describe('resolveKbNotePath (KB_ROOT unset)', () => {
   it('rejects a relative path', async () => {
     const { resolveKbNotePath, KbPathError } = await importPaths()
-    expect(() => resolveKbNotePath('Pillars/sub/note.md')).toThrow(KbPathError)
+    expect(() => resolveKbNotePath('sub/note.md')).toThrow(KbPathError)
   })
 
-  it('accepts an absolute path (no Pillars confinement)', async () => {
+  it('accepts an absolute path (no confinement)', async () => {
     const { resolveKbNotePath } = await importPaths()
-    const abs = path.join(pillars, 'sub', 'note.md')
+    const abs = path.join(kbRoot, 'sub', 'note.md')
     expect(resolveKbNotePath(abs)).toBe(real(abs))
   })
 
   it('still rejects ".." segments', async () => {
     const { resolveKbNotePath, KbPathError } = await importPaths()
     expect(() => resolveKbNotePath('/a/../b')).toThrow(KbPathError)
-  })
-})
-
-describe('resolvePillarsRoot', () => {
-  it('defaults to KB_ROOT/Pillars when no arg is given', async () => {
-    process.env.MCP_NOTION_MIRROR_KB_ROOT = kbRoot
-    vi.resetModules()
-    const { resolvePillarsRoot } = await importPaths()
-    expect(resolvePillarsRoot()).toBe(real(pillars))
-  })
-
-  it('accepts an explicit root equal to KB_ROOT', async () => {
-    process.env.MCP_NOTION_MIRROR_KB_ROOT = kbRoot
-    vi.resetModules()
-    const { resolvePillarsRoot } = await importPaths()
-    expect(resolvePillarsRoot(kbRoot)).toBe(real(pillars))
-  })
-
-  it('rejects a root with ".." segments', async () => {
-    process.env.MCP_NOTION_MIRROR_KB_ROOT = kbRoot
-    vi.resetModules()
-    const { resolvePillarsRoot, KbPathError } = await importPaths()
-    expect(() => resolvePillarsRoot('/a/../b')).toThrow(KbPathError)
-  })
-
-  it('rejects a relative root', async () => {
-    process.env.MCP_NOTION_MIRROR_KB_ROOT = kbRoot
-    vi.resetModules()
-    const { resolvePillarsRoot } = await importPaths()
-    expect(() => resolvePillarsRoot('relative/root')).toThrow(/must be an absolute path/)
-  })
-
-  it('rejects a root outside KB_ROOT', async () => {
-    process.env.MCP_NOTION_MIRROR_KB_ROOT = kbRoot
-    vi.resetModules()
-    const { resolvePillarsRoot } = await importPaths()
-    const other = await fsp.mkdtemp(path.join(os.tmpdir(), 'mcp-notion-mirror-other-'))
-    try {
-      expect(() => resolvePillarsRoot(other)).toThrow(/escapes the allowed KB root/)
-    } finally {
-      await fsp.rm(other, { recursive: true, force: true })
-    }
-  })
-
-  it('throws when no root is given and KB_ROOT is unset', async () => {
-    const { resolvePillarsRoot, KbPathError } = await importPaths()
-    expect(() => resolvePillarsRoot()).toThrow(KbPathError)
-  })
-
-  it('accepts an absolute root when KB_ROOT is unset (no confinement)', async () => {
-    const { resolvePillarsRoot } = await importPaths()
-    expect(resolvePillarsRoot(kbRoot)).toBe(real(pillars))
   })
 })

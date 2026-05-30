@@ -1,0 +1,258 @@
+import * as fsp from 'node:fs/promises'
+import * as os from 'node:os'
+import * as path from 'node:path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+const DB_ID = '36f9f7187cc280f69272e60aa89bff24'
+const PAGE_HEX = '3709f7187cc2814e8652f99fd36857ff'
+const MIRROR_URL = `https://www.notion.so/My-Note-${PAGE_HEX}`
+const PAGE_RESPONSE = {
+  id: '3709f718-7cc2-814e-8652-f99fd36857ff',
+  url: MIRROR_URL,
+  created_time: '2026-05-30T01:13:00.000Z',
+  last_edited_time: '2026-05-30T02:00:00.000Z',
+  archived: false,
+  parent: { type: 'database_id', database_id: DB_ID },
+  properties: { Page: { type: 'title', title: [{ plain_text: 'My Note' }] } }
+}
+const DB_RESPONSE = { properties: { Tags: { id: 't', type: 'multi_select' }, Page: { id: 'p', type: 'title' } } }
+
+const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200 })
+const fail = (status: number) => new Response(JSON.stringify({ code: 'x', message: 'boom' }), { status })
+
+const FM = (extra = ''): string => `---\nstatus: current\nnotion_source_url: https://www.notion.so/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nnotion_path: A / B${extra}\n---\n# My Note\n\nBody paragraph.\n`
+
+describe('mirror-ops', () => {
+  let kbRoot: string
+  let fetchMock: ReturnType<typeof vi.fn>
+
+  const writeNote = async (name: string, content: string): Promise<string> => {
+    const abs = path.join(kbRoot, name)
+    await fsp.writeFile(abs, content)
+    return abs
+  }
+  const importOps = () => import('./mirror-ops.js')
+
+  beforeEach(async () => {
+    kbRoot = await fsp.mkdtemp(path.join(os.tmpdir(), 'mcp-notion-mirror-ops-'))
+    process.env.MCP_NOTION_MIRROR_TOKEN = 'ntn_secrettoken'
+    process.env.MCP_NOTION_MIRROR_API_BASE_URL = 'https://api.notion.test'
+    process.env.MCP_NOTION_MIRROR_KB_ROOT = kbRoot
+    delete process.env.MCP_NOTION_MIRROR_BANNER_TEMPLATE
+    fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    vi.resetModules()
+  })
+
+  afterEach(async () => {
+    vi.unstubAllGlobals()
+    delete process.env.MCP_NOTION_MIRROR_API_BASE_URL
+    delete process.env.MCP_NOTION_MIRROR_KB_ROOT
+    delete process.env.MCP_NOTION_MIRROR_BANNER_TEMPLATE
+    await fsp.rm(kbRoot, { recursive: true, force: true })
+  })
+
+  describe('publishNote', () => {
+    it('publishes under a database parent: resolves the title prop, prepends the banner, strips the H1, writes back', async () => {
+      const abs = await writeNote('My Note.md', FM())
+      fetchMock.mockResolvedValueOnce(ok(DB_RESPONSE)) // GET database (title prop)
+      fetchMock.mockResolvedValueOnce(ok(PAGE_RESPONSE)) // POST page
+      const { publishNote } = await importOps()
+      const result = await publishNote(abs, { type: 'database_id', database_id: DB_ID }, false)
+      expect(result).toEqual({ url: MIRROR_URL, page_id: PAGE_RESPONSE.id, published_at: '2026-05-30T01:13:00Z' })
+
+      const postBody = JSON.parse(fetchMock.mock.calls[1]?.[1].body)
+      expect(postBody.properties).toEqual({ Page: { title: [{ text: { content: 'My Note' } }] } })
+      expect(postBody.children[0].type).toBe('callout') // banner first
+      // H1 stripped: no heading_1 block in the body
+      expect(postBody.children.some((b: { type: string }) => b.type === 'heading_1')).toBe(false)
+
+      const written = await fsp.readFile(abs, 'utf-8')
+      expect(written).toContain(`notion_mirror_url: ${MIRROR_URL}`)
+      expect(written).toContain('notion_mirror_published_at: 2026-05-30T01:13:00Z')
+    })
+
+    it('skips when already mirrored and force is false, making no Notion call', async () => {
+      const abs = await writeNote('note.md', FM(`\nnotion_mirror_url: ${MIRROR_URL}`))
+      const { publishNote } = await importOps()
+      const result = await publishNote(abs, { type: 'database_id', database_id: DB_ID }, false)
+      expect(result).toEqual({ skipped: true, existing_url: MIRROR_URL })
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('force re-publish archives the old page (tolerating archive failure) then posts a new one', async () => {
+      const abs = await writeNote('note.md', FM(`\nnotion_mirror_url: ${MIRROR_URL}`))
+      fetchMock.mockResolvedValueOnce(fail(500)) // archive old → fails, swallowed
+      fetchMock.mockResolvedValueOnce(ok(DB_RESPONSE)) // GET database
+      fetchMock.mockResolvedValueOnce(ok({ ...PAGE_RESPONSE, url: `https://www.notion.so/New-${PAGE_HEX}` })) // POST
+      const { publishNote } = await importOps()
+      const result = await publishNote(abs, { type: 'database_id', database_id: DB_ID }, true)
+      expect((result as { url: string }).url).toBe(`https://www.notion.so/New-${PAGE_HEX}`)
+      const archiveCall = fetchMock.mock.calls[0]
+      expect(archiveCall?.[0]).toBe(`https://api.notion.test/v1/pages/${PAGE_HEX}`)
+      expect(JSON.parse(archiveCall?.[1].body)).toEqual({ archived: true })
+    })
+
+    it('force re-publish with a malformed existing url skips the archive call', async () => {
+      const abs = await writeNote('note.md', FM('\nnotion_mirror_url: https://www.notion.so/no-id-here'))
+      fetchMock.mockResolvedValueOnce(ok(DB_RESPONSE)) // GET database (no archive call first)
+      fetchMock.mockResolvedValueOnce(ok(PAGE_RESPONSE)) // POST
+      const { publishNote } = await importOps()
+      await publishNote(abs, { type: 'database_id', database_id: DB_ID }, true)
+      expect(fetchMock.mock.calls[0]?.[0]).toBe(`https://api.notion.test/v1/databases/${DB_ID}`)
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
+
+    it('under a page parent uses the reserved title and makes no GET database call', async () => {
+      const abs = await writeNote('My Note.md', FM())
+      fetchMock.mockResolvedValueOnce(ok(PAGE_RESPONSE)) // POST only
+      const { publishNote } = await importOps()
+      await publishNote(abs, { type: 'page_id', page_id: PAGE_HEX }, false)
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      const body = JSON.parse(fetchMock.mock.calls[0]?.[1].body)
+      expect(body.properties).toEqual({ title: { title: [{ text: { content: 'My Note' } }] } })
+    })
+
+    it('throws when the note has no frontmatter', async () => {
+      const abs = await writeNote('note.md', '# Just a heading\n\nbody\n')
+      const { publishNote } = await importOps()
+      await expect(publishNote(abs, { type: 'page_id', page_id: PAGE_HEX }, false)).rejects.toThrow(/no YAML frontmatter/)
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('publishes just the banner when the body is empty', async () => {
+      const abs = await writeNote('note.md', '---\nstatus: x\nnotion_path: A\n---\n')
+      fetchMock.mockResolvedValueOnce(ok(PAGE_RESPONSE)) // POST (page parent)
+      const { publishNote } = await importOps()
+      await publishNote(abs, { type: 'page_id', page_id: PAGE_HEX }, false)
+      const body = JSON.parse(fetchMock.mock.calls[0]?.[1].body)
+      expect(body.children).toHaveLength(1)
+      expect(body.children[0].type).toBe('callout')
+    })
+
+    it('errors when the body is empty and the banner is disabled', async () => {
+      process.env.MCP_NOTION_MIRROR_BANNER_TEMPLATE = ''
+      vi.resetModules()
+      const abs = await writeNote('note.md', '---\nstatus: x\nnotion_path: A\n---\n')
+      const { publishNote } = await importOps()
+      await expect(publishNote(abs, { type: 'page_id', page_id: PAGE_HEX }, false)).rejects.toThrow(/Nothing to publish/)
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('unpublishNote', () => {
+    it('dry-run (default) returns the plan, makes no Notion call, leaves the file unchanged', async () => {
+      const content = FM(`\nnotion_mirror_url: ${MIRROR_URL}`)
+      const abs = await writeNote('note.md', content)
+      const { unpublishNote } = await importOps()
+      const result = await unpublishNote(abs, true)
+      expect(result).toEqual({ dry_run: true, would_archive_url: MIRROR_URL, would_archive_page_id: PAGE_HEX, would_clear_fields: ['notion_mirror_url', 'notion_mirror_published_at'] })
+      expect(fetchMock).not.toHaveBeenCalled()
+      expect(await fsp.readFile(abs, 'utf-8')).toBe(content)
+    })
+
+    it('with dry_run false archives the page and clears the mirror fields', async () => {
+      const abs = await writeNote('note.md', FM(`\nnotion_mirror_url: ${MIRROR_URL}\nnotion_mirror_published_at: 2026-05-30T01:13:00Z`))
+      fetchMock.mockResolvedValueOnce(ok({})) // archive
+      const { unpublishNote } = await importOps()
+      const result = await unpublishNote(abs, false)
+      expect(result).toEqual({ archived: true, page_id: PAGE_HEX, url: MIRROR_URL })
+      const written = await fsp.readFile(abs, 'utf-8')
+      expect(written).not.toContain('notion_mirror_url')
+      expect(written).not.toContain('notion_mirror_published_at')
+      expect(written).toContain('notion_path: A / B')
+    })
+
+    it('returns not-published when the note has no mirror url', async () => {
+      const abs = await writeNote('note.md', FM())
+      const { unpublishNote } = await importOps()
+      expect(await unpublishNote(abs, false)).toEqual({ archived: false, reason: 'not-published' })
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('throws on a malformed mirror url', async () => {
+      const abs = await writeNote('note.md', FM('\nnotion_mirror_url: https://www.notion.so/no-id'))
+      const { unpublishNote } = await importOps()
+      await expect(unpublishNote(abs, false)).rejects.toThrow(/Could not extract a 32-hex page id/)
+    })
+  })
+
+  describe('moveNote', () => {
+    it('re-parents the page (same parent type) and does not touch the file', async () => {
+      const content = FM(`\nnotion_mirror_url: ${MIRROR_URL}`)
+      const abs = await writeNote('note.md', content)
+      fetchMock.mockResolvedValueOnce(ok({ ...PAGE_RESPONSE, parent: { type: 'page_id', page_id: 'old' } })) // GET before
+      fetchMock.mockResolvedValueOnce(ok({})) // PATCH parent
+      const { moveNote } = await importOps()
+      const result = await moveNote(abs, { type: 'page_id', page_id: PAGE_HEX })
+      expect(result).toEqual({ moved: true, page_id: PAGE_HEX, previous_parent: { type: 'page_id', page_id: 'old' }, new_parent: { type: 'page_id', page_id: PAGE_HEX } })
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+      expect(await fsp.readFile(abs, 'utf-8')).toBe(content)
+    })
+
+    it('detects the page-id ↔ database-id silent-failure case and errors', async () => {
+      const abs = await writeNote('note.md', FM(`\nnotion_mirror_url: ${MIRROR_URL}`))
+      const pageParent = { type: 'page_id', page_id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' }
+      fetchMock.mockResolvedValueOnce(ok({ ...PAGE_RESPONSE, parent: pageParent })) // GET before (page parent)
+      fetchMock.mockResolvedValueOnce(ok({})) // PATCH parent (silently ignored)
+      fetchMock.mockResolvedValueOnce(ok({ ...PAGE_RESPONSE, parent: pageParent })) // GET after — unchanged
+      const { moveNote } = await importOps()
+      await expect(moveNote(abs, { type: 'database_id', database_id: DB_ID })).rejects.toThrow(/silently ignored the parent change/)
+    })
+
+    it('accepts a cross-type move that actually took effect', async () => {
+      const abs = await writeNote('note.md', FM(`\nnotion_mirror_url: ${MIRROR_URL}`))
+      fetchMock.mockResolvedValueOnce(ok({ ...PAGE_RESPONSE, parent: { type: 'page_id', page_id: 'old' } })) // GET before
+      fetchMock.mockResolvedValueOnce(ok({})) // PATCH
+      fetchMock.mockResolvedValueOnce(ok({ ...PAGE_RESPONSE, parent: { type: 'database_id', database_id: DB_ID } })) // GET after — changed
+      const { moveNote } = await importOps()
+      const result = await moveNote(abs, { type: 'database_id', database_id: DB_ID })
+      expect((result as { moved: boolean }).moved).toBe(true)
+    })
+
+    it('throws when the note is not published', async () => {
+      const abs = await writeNote('note.md', FM())
+      const { moveNote } = await importOps()
+      await expect(moveNote(abs, { type: 'page_id', page_id: PAGE_HEX })).rejects.toThrow(/not published — cannot move/)
+    })
+
+    it('throws on a malformed mirror url', async () => {
+      const abs = await writeNote('note.md', FM('\nnotion_mirror_url: https://www.notion.so/no-id'))
+      const { moveNote } = await importOps()
+      await expect(moveNote(abs, { type: 'page_id', page_id: PAGE_HEX })).rejects.toThrow(/Could not extract a 32-hex page id/)
+    })
+  })
+
+  describe('getNote', () => {
+    it('returns the live Notion page state without mutating the file', async () => {
+      const content = FM(`\nnotion_mirror_url: ${MIRROR_URL}`)
+      const abs = await writeNote('note.md', content)
+      fetchMock.mockResolvedValueOnce(ok(PAGE_RESPONSE))
+      const { getNote } = await importOps()
+      const result = await getNote(abs)
+      expect(result).toEqual({
+        id: PAGE_RESPONSE.id,
+        parent: { type: 'database_id', database_id: DB_ID },
+        title: 'My Note',
+        created_time: PAGE_RESPONSE.created_time,
+        last_edited_time: PAGE_RESPONSE.last_edited_time,
+        archived: false,
+        url: MIRROR_URL
+      })
+      expect(await fsp.readFile(abs, 'utf-8')).toBe(content)
+    })
+
+    it('returns exists:false when the note has no mirror url', async () => {
+      const abs = await writeNote('note.md', FM())
+      const { getNote } = await importOps()
+      expect(await getNote(abs)).toEqual({ exists: false, reason: 'not-published' })
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('throws on a malformed mirror url', async () => {
+      const abs = await writeNote('note.md', FM('\nnotion_mirror_url: https://www.notion.so/no-id'))
+      const { getNote } = await importOps()
+      await expect(getNote(abs)).rejects.toThrow(/Could not extract a 32-hex page id/)
+    })
+  })
+})

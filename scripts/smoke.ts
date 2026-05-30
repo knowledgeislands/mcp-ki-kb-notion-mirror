@@ -5,16 +5,16 @@
 // cover registration; this covers the actual protocol round-trip).
 //
 // Run via `bun run test:smoke` (builds dist/ first). Runs in CI without secrets:
-// the server needs MCP_NOTION_MIRROR_TOKEN + _WIKI_DATABASE_ID to boot, so we
-// pass throwaway placeholders — no real Notion call is ever made.
+// the server only needs MCP_NOTION_MIRROR_TOKEN to boot, so we pass a throwaway
+// placeholder — no real Notion call is ever made.
 
 import * as os from 'node:os'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 
 // Single source of truth for the tool surface — kept in sync with
-// src/tools/notes/index.ts and the access-level tests. Add a tool → update both.
-const EXPECTED_TOOLS = ['notion_mirror_note_status', 'notion_mirror_unpublished_list', 'notion_mirror_note_publish', 'notion_mirror_note_move', 'notion_mirror_note_archive'] as const
+// src/tools/mirror/index.ts and the access-level tests. Add a tool → update both.
+const EXPECTED_TOOLS = ['notion_mirror_publish', 'notion_mirror_unpublish', 'notion_mirror_move', 'notion_mirror_get'] as const
 
 const die = (msg: string, detail?: unknown): never => {
   console.error(`✗ smoke failed: ${msg}`)
@@ -28,11 +28,10 @@ const main = async (): Promise<void> => {
     args: ['dist/mcp-server/index.js'],
     // Placeholder config so boot validation passes headless, and access level
     // raised to `destructive` so the smoke sees the full surface (the default
-    // `read` gate would otherwise hide publish + archive).
+    // `write` gate would otherwise hide unpublish).
     env: {
       ...(process.env as Record<string, string>),
       MCP_NOTION_MIRROR_TOKEN: 'ntn_smoke_placeholder',
-      MCP_NOTION_MIRROR_WIKI_DATABASE_ID: '00000000000000000000000000000000',
       MCP_NOTION_MIRROR_KB_ROOT: os.tmpdir(),
       MCP_NOTION_MIRROR_ACCESS_LEVEL: 'destructive',
       MCP_NOTION_MIRROR_AUDIT_LOG: 'off'

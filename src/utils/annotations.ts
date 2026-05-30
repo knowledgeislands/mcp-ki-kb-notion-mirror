@@ -10,30 +10,20 @@
  *   idempotentHint  — same input → same end state
  *   openWorldHint   — interacts with services outside the local environment
  *
- * Canonical preset set across the sibling MCPs (each repo exports the subset
- * its tools need). Unmarked names are the defaults at each tier; suffixes flag
- * deviations (`_IDEMPOTENT` = retry-safe write; `_ONESHOT` = non-idempotent
- * destructive):
- *   READ_ONLY               — closed-world read
- *   READ_ONLY_REMOTE        — open-world read
- *   WRITE                   — closed-world non-destructive mutation (non-idempotent — create-new, rename)
- *   WRITE_REMOTE            — open-world non-destructive mutation (non-idempotent)
- *   WRITE_IDEMPOTENT        — closed-world non-destructive mutation, retry-safe (mkdir -p, set-status)
- *   WRITE_IDEMPOTENT_REMOTE — open-world retry-safe mutation
- *   DESTRUCTIVE             — closed-world destructive (idempotent end state)
- *   DESTRUCTIVE_REMOTE      — open-world destructive (idempotent end state)
- *   DESTRUCTIVE_ONESHOT     — closed-world destructive, NON-idempotent
- *                             (effect depends on current state — e.g. prune)
+ * This MCP's surface (every tool calls the Notion API → all open-world):
+ *   - notion_mirror_get fetches a page → READ_ONLY_REMOTE.
+ *   - notion_mirror_publish creates a new Notion page each call (non-idempotent)
+ *     and writes back to the KB note → WRITE_REMOTE.
+ *   - notion_mirror_move re-parents an existing page (non-idempotent end state
+ *     depends on current parent) → WRITE_REMOTE.
+ *   - notion_mirror_unpublish archives a Notion page (idempotent end state) and
+ *     clears two frontmatter fields → DESTRUCTIVE_REMOTE.
  *
- * This MCP's surface:
- *   - notion_mirror_note_status / notion_mirror_unpublished_list read only KB
- *     files on disk → READ_ONLY.
- *   - notion_mirror_note_publish creates a new Notion page each force run
- *     (non-idempotent) and writes back to the KB note → WRITE_REMOTE.
- *   - notion_mirror_note_archive archives a Notion page (idempotent end state)
- *     and clears two frontmatter fields → DESTRUCTIVE_REMOTE.
+ * The access-level gate keys off readOnlyHint/destructiveHint only:
+ *   readOnlyHint:true → read · destructiveHint:true → destructive ·
+ *   both false → write.
  */
-export const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const
+export const READ_ONLY_REMOTE = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true } as const
 
 export const WRITE_REMOTE = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true } as const
 

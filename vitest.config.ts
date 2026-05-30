@@ -7,11 +7,10 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     fileParallelism: false,
     env: {
-      // Bogus token + database id so config.ts boot validation passes when tests
-      // instantiate modules that import config. The token is never used to make a
-      // real call — the Notion client is exercised through `fetch` mocks.
-      MCP_NOTION_MIRROR_TOKEN: 'ntn_placeholder',
-      MCP_NOTION_MIRROR_WIKI_DATABASE_ID: '00000000000000000000000000000000'
+      // Bogus token so config.ts boot validation passes when tests instantiate
+      // modules that import config. The token is never used to make a real call
+      // — the Notion client is exercised through `fetch` mocks.
+      MCP_NOTION_MIRROR_TOKEN: 'ntn_placeholder'
     },
     coverage: {
       provider: 'v8',

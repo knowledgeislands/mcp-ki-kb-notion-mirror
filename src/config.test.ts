@@ -4,10 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const KEYS = [
   'MCP_NOTION_MIRROR_TOKEN',
-  'MCP_NOTION_MIRROR_WIKI_DATABASE_ID',
   'MCP_NOTION_MIRROR_API_BASE_URL',
   'MCP_NOTION_MIRROR_KB_ROOT',
-  'MCP_NOTION_MIRROR_BANNER_TEXT',
+  'MCP_NOTION_MIRROR_BANNER_TEMPLATE',
   'MCP_NOTION_MIRROR_ACCESS_LEVEL',
   'MCP_NOTION_MIRROR_AUDIT_LOG',
   'MCP_NOTION_MIRROR_AUDIT_LOG_PATH',
@@ -22,7 +21,6 @@ beforeEach(() => {
   // Re-seed the required vars so module evaluation succeeds; tests override.
   for (const k of KEYS) delete process.env[k]
   process.env.MCP_NOTION_MIRROR_TOKEN = 'ntn_placeholder'
-  process.env.MCP_NOTION_MIRROR_WIKI_DATABASE_ID = '00000000000000000000000000000000'
   vi.resetModules()
 })
 
@@ -54,19 +52,6 @@ describe('NOTION_TOKEN', () => {
     process.env.MCP_NOTION_MIRROR_TOKEN = '  ntn_abc  '
     const { NOTION_TOKEN } = await import('./config.js')
     expect(NOTION_TOKEN).toBe('ntn_abc')
-  })
-})
-
-describe('WIKI_DATABASE_ID', () => {
-  it('reads the database id from env', async () => {
-    process.env.MCP_NOTION_MIRROR_WIKI_DATABASE_ID = '36f9f7187cc280f69272e60aa89bff24'
-    const { WIKI_DATABASE_ID } = await import('./config.js')
-    expect(WIKI_DATABASE_ID).toBe('36f9f7187cc280f69272e60aa89bff24')
-  })
-
-  it('throws when unset', async () => {
-    delete process.env.MCP_NOTION_MIRROR_WIKI_DATABASE_ID
-    await expect(import('./config.js')).rejects.toThrow(/MCP_NOTION_MIRROR_WIKI_DATABASE_ID is required/)
   })
 })
 
@@ -119,35 +104,36 @@ describe('KB_ROOT', () => {
   })
 })
 
-describe('BANNER_TEXT', () => {
-  it('is undefined when unset', async () => {
-    const { BANNER_TEXT } = await import('./config.js')
-    expect(BANNER_TEXT).toBeUndefined()
+describe('BANNER_TEMPLATE', () => {
+  it('defaults to the KB banner template (with the {date} placeholder) when unset', async () => {
+    const { BANNER_TEMPLATE, DEFAULT_BANNER_TEMPLATE } = await import('./config.js')
+    expect(BANNER_TEMPLATE).toBe(DEFAULT_BANNER_TEMPLATE)
+    expect(BANNER_TEMPLATE).toContain('{date}')
   })
 
-  it('is undefined when blank', async () => {
-    process.env.MCP_NOTION_MIRROR_BANNER_TEXT = '   '
-    const { BANNER_TEXT } = await import('./config.js')
-    expect(BANNER_TEXT).toBeUndefined()
+  it('is the empty string when set empty (banner disabled)', async () => {
+    process.env.MCP_NOTION_MIRROR_BANNER_TEMPLATE = ''
+    const { BANNER_TEMPLATE } = await import('./config.js')
+    expect(BANNER_TEMPLATE).toBe('')
   })
 
-  it('passes a custom string through verbatim', async () => {
-    process.env.MCP_NOTION_MIRROR_BANNER_TEXT = ' — see internal docs.'
-    const { BANNER_TEXT } = await import('./config.js')
-    expect(BANNER_TEXT).toBe(' — see internal docs.')
+  it('passes a custom template through verbatim', async () => {
+    process.env.MCP_NOTION_MIRROR_BANNER_TEMPLATE = 'Synced {date}.'
+    const { BANNER_TEMPLATE } = await import('./config.js')
+    expect(BANNER_TEMPLATE).toBe('Synced {date}.')
   })
 })
 
 describe('ACCESS_LEVEL', () => {
-  it('defaults to read when unset', async () => {
+  it('defaults to write when unset', async () => {
     const { ACCESS_LEVEL } = await import('./config.js')
-    expect(ACCESS_LEVEL).toBe('read')
+    expect(ACCESS_LEVEL).toBe('write')
   })
 
-  it('defaults to read when blank', async () => {
+  it('defaults to write when blank', async () => {
     process.env.MCP_NOTION_MIRROR_ACCESS_LEVEL = '  '
     const { ACCESS_LEVEL } = await import('./config.js')
-    expect(ACCESS_LEVEL).toBe('read')
+    expect(ACCESS_LEVEL).toBe('write')
   })
 
   it.each(['read', 'write', 'destructive'] as const)('accepts %s', async (level) => {

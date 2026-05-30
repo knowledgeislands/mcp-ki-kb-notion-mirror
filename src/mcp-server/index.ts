@@ -8,46 +8,48 @@
  * YAML frontmatter. The KB is canonical; the mirror is a derivative read
  * surface for non-KB consumers.
  *
+ * This is a FILE-AWARE, LAYOUT-AGNOSTIC publisher: it acts on one `kb_path` per
+ * call and (for mutations) a Notion `parent` the caller supplies. It does not
+ * walk directories, resolve parents, or know any folder convention — that is
+ * the orchestrator's job (see REWRITE-SPEC-v1.md).
+ *
  * Configuration (environment variables):
- *   MCP_NOTION_MIRROR_TOKEN              Required. Notion internal-integration
- *                                        secret (ntn_…). Must have Insert +
- *                                        Update content and be Connected to the
- *                                        target wiki page.
- *   MCP_NOTION_MIRROR_WIKI_DATABASE_ID   Required. The wiki database new mirror
- *                                        pages are created in.
- *   MCP_NOTION_MIRROR_KB_ROOT            Optional. Absolute KB root containing
- *                                        Pillars/. When unset, kb_path args must
- *                                        be absolute.
- *   MCP_NOTION_MIRROR_ACCESS_LEVEL       Optional. read | write | destructive.
- *                                        Default: write (archive needs
- *                                        destructive).
- *   MCP_NOTION_MIRROR_BANNER_TEXT        Optional. Override the banner's
- *                                        trailing sentence.
- *   MCP_NOTION_MIRROR_AUDIT_LOG          Optional. off | writes | all. Default: writes.
- *   MCP_NOTION_MIRROR_AUDIT_LOG_PATH     Optional. Default
- *                                        ~/.local/state/mcp-notion-mirror/audit.jsonl.
+ *   MCP_NOTION_MIRROR_TOKEN            Required. Notion internal-integration
+ *                                      secret (ntn_…). Needs Read + Insert +
+ *                                      Update content and a Connection to every
+ *                                      page/database it publishes into.
+ *   MCP_NOTION_MIRROR_KB_ROOT          Optional. Absolute KB root. When set,
+ *                                      kb_path args resolve under it and are
+ *                                      confined to it; when unset, kb_path must
+ *                                      be absolute (caller bounds traversal).
+ *   MCP_NOTION_MIRROR_ACCESS_LEVEL     Optional. read | write | destructive.
+ *                                      Default: write.
+ *   MCP_NOTION_MIRROR_BANNER_TEMPLATE  Optional. Banner copy; {date} → today's
+ *                                      UTC date. Empty string disables the banner.
+ *   MCP_NOTION_MIRROR_AUDIT_LOG        Optional. off | writes | all. Default: writes.
+ *   MCP_NOTION_MIRROR_AUDIT_LOG_PATH   Optional. Default
+ *                                      ~/.local/state/mcp-notion-mirror/audit.jsonl.
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { ACCESS_LEVEL, AUDIT_LOG_MODE, AUDIT_LOG_PATH, KB_ROOT, NOTION_API_BASE_URL, WIKI_DATABASE_ID } from '../config.js'
-import { registerNotesTools } from '../tools/notes/index.js'
+import { ACCESS_LEVEL, AUDIT_LOG_MODE, AUDIT_LOG_PATH, KB_ROOT, NOTION_API_BASE_URL } from '../config.js'
+import { registerMirrorTools } from '../tools/mirror/index.js'
 import { makeAccessGatedRegister } from '../utils/access-level.js'
 
 console.error(`mcp-notion-mirror starting...`)
 console.error(`  MCP_NOTION_MIRROR_API_BASE_URL=${NOTION_API_BASE_URL}`)
-console.error(`  MCP_NOTION_MIRROR_WIKI_DATABASE_ID=${WIKI_DATABASE_ID}`)
 console.error(`  MCP_NOTION_MIRROR_KB_ROOT=${KB_ROOT ?? '(unset — kb_path must be absolute)'}`)
 console.error(`  MCP_NOTION_MIRROR_ACCESS_LEVEL=${ACCESS_LEVEL}`)
 console.error(`  MCP_NOTION_MIRROR_AUDIT_LOG=${AUDIT_LOG_MODE}${AUDIT_LOG_MODE === 'off' ? '' : ` (path: ${AUDIT_LOG_PATH})`}`)
 
 const server = new McpServer({
   name: 'mcp-notion-mirror',
-  version: '1.0.1'
+  version: '1.0.0'
 })
 server.registerTool = makeAccessGatedRegister(server)
 
-registerNotesTools(server)
+registerMirrorTools(server)
 
 const main = async (): Promise<void> => {
   const transport = new StdioServerTransport()

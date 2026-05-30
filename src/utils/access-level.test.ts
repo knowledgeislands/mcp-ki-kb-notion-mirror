@@ -1,10 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { DESTRUCTIVE_REMOTE, READ_ONLY, WRITE_REMOTE } from './annotations.js'
+import { DESTRUCTIVE_REMOTE, READ_ONLY_REMOTE, WRITE_REMOTE } from './annotations.js'
 
 describe('levelFromAnnotations / makeAccessGatedRegister (mcp-notion-mirror)', () => {
   beforeEach(() => {
     process.env.MCP_NOTION_MIRROR_TOKEN = 'ntn_placeholder'
-    process.env.MCP_NOTION_MIRROR_WIKI_DATABASE_ID = '00000000000000000000000000000000'
     delete process.env.MCP_NOTION_MIRROR_ACCESS_LEVEL
     vi.resetModules()
   })
@@ -13,9 +12,9 @@ describe('levelFromAnnotations / makeAccessGatedRegister (mcp-notion-mirror)', (
     delete process.env.MCP_NOTION_MIRROR_ACCESS_LEVEL
   })
 
-  it('maps READ_ONLY to read', async () => {
+  it('maps READ_ONLY_REMOTE to read', async () => {
     const { levelFromAnnotations } = await import('./access-level.js')
-    expect(levelFromAnnotations(READ_ONLY)).toBe('read')
+    expect(levelFromAnnotations(READ_ONLY_REMOTE)).toBe('read')
   })
 
   it('maps WRITE_REMOTE to write', async () => {
@@ -44,35 +43,33 @@ describe('levelFromAnnotations / makeAccessGatedRegister (mcp-notion-mirror)', (
     return { calls, stub }
   }
 
-  it('registers read + write but not destructive at gate=write', async () => {
-    process.env.MCP_NOTION_MIRROR_ACCESS_LEVEL = 'write'
+  const registerSurface = (gated: ReturnType<typeof import('./access-level.js').makeAccessGatedRegister>) => {
+    gated('notion_mirror_get', { title: 't', description: 'd', annotations: READ_ONLY_REMOTE } as never, (async () => ({ content: [] })) as never)
+    gated('notion_mirror_publish', { title: 't', description: 'd', annotations: WRITE_REMOTE } as never, (async () => ({ content: [] })) as never)
+    gated('notion_mirror_unpublish', { title: 't', description: 'd', annotations: DESTRUCTIVE_REMOTE } as never, (async () => ({ content: [] })) as never)
+  }
+
+  it('registers only read-level tools at gate=read', async () => {
+    process.env.MCP_NOTION_MIRROR_ACCESS_LEVEL = 'read'
     const { makeAccessGatedRegister } = await import('./access-level.js')
     const { calls, stub } = makeStub()
-    const gated = makeAccessGatedRegister(stub as unknown as Parameters<typeof makeAccessGatedRegister>[0])
-    gated('notion_mirror_note_status', { title: 't', description: 'd', annotations: READ_ONLY } as never, (async () => ({ content: [] })) as never)
-    gated('notion_mirror_note_publish', { title: 't', description: 'd', annotations: WRITE_REMOTE } as never, (async () => ({ content: [] })) as never)
-    gated('notion_mirror_note_archive', { title: 't', description: 'd', annotations: DESTRUCTIVE_REMOTE } as never, (async () => ({ content: [] })) as never)
-    expect(calls).toEqual(['notion_mirror_note_status', 'notion_mirror_note_publish'])
+    registerSurface(makeAccessGatedRegister(stub as unknown as Parameters<typeof makeAccessGatedRegister>[0]))
+    expect(calls).toEqual(['notion_mirror_get'])
   })
 
-  it('registers only read-level tools by default (gate=read)', async () => {
+  it('registers read + write but not destructive by default (gate=write)', async () => {
     const { makeAccessGatedRegister } = await import('./access-level.js')
     const { calls, stub } = makeStub()
-    const gated = makeAccessGatedRegister(stub as unknown as Parameters<typeof makeAccessGatedRegister>[0])
-    gated('notion_mirror_note_status', { title: 't', description: 'd', annotations: READ_ONLY } as never, (async () => ({ content: [] })) as never)
-    gated('notion_mirror_note_publish', { title: 't', description: 'd', annotations: WRITE_REMOTE } as never, (async () => ({ content: [] })) as never)
-    expect(calls).toEqual(['notion_mirror_note_status'])
+    registerSurface(makeAccessGatedRegister(stub as unknown as Parameters<typeof makeAccessGatedRegister>[0]))
+    expect(calls).toEqual(['notion_mirror_get', 'notion_mirror_publish'])
   })
 
   it('registers every level when gate=destructive', async () => {
     process.env.MCP_NOTION_MIRROR_ACCESS_LEVEL = 'destructive'
     const { makeAccessGatedRegister } = await import('./access-level.js')
     const { calls, stub } = makeStub()
-    const gated = makeAccessGatedRegister(stub as unknown as Parameters<typeof makeAccessGatedRegister>[0])
-    gated('notion_mirror_note_status', { title: 't', description: 'd', annotations: READ_ONLY } as never, (async () => ({ content: [] })) as never)
-    gated('notion_mirror_note_publish', { title: 't', description: 'd', annotations: WRITE_REMOTE } as never, (async () => ({ content: [] })) as never)
-    gated('notion_mirror_note_archive', { title: 't', description: 'd', annotations: DESTRUCTIVE_REMOTE } as never, (async () => ({ content: [] })) as never)
-    expect(calls).toEqual(['notion_mirror_note_status', 'notion_mirror_note_publish', 'notion_mirror_note_archive'])
+    registerSurface(makeAccessGatedRegister(stub as unknown as Parameters<typeof makeAccessGatedRegister>[0]))
+    expect(calls).toEqual(['notion_mirror_get', 'notion_mirror_publish', 'notion_mirror_unpublish'])
   })
 
   it('treats an unannotated tool as destructive (fail-safe — skipped under default gate=write)', async () => {

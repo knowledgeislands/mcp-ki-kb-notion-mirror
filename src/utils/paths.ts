@@ -1,17 +1,20 @@
 /**
- * KB path validation. Every `kb_path` (and the `root` argument of the
- * unpublished-list tool) runs through here before any `fs.*` call.
+ * KB path validation. Every `kb_path` runs through here before any `fs.*` call.
  *
  * Two-layer guard, matching the sibling MCPs:
  *   1. Lexical — reject `..` segments and (when KB_ROOT is set) confine the
- *      normalized path under `<KB_ROOT>/Pillars/`.
+ *      normalized path under KB_ROOT.
  *   2. Realpath — resolve the deepest existing ancestor with `fs.realpathSync`
  *      and re-check confinement, catching symlink escapes that survive the
  *      lexical check.
  *
  * When KB_ROOT is unset, relative paths are rejected (the MCP can't anchor
  * them) and absolute paths are accepted after the `..` check — there is no
- * Pillars confinement because there is no root to confine against.
+ * confinement because there is no root to confine against (caller's
+ * responsibility, per REWRITE-SPEC-v1 §Configuration).
+ *
+ * Unlike the v0.x server, there is NO `Pillars/` confinement: this MCP is
+ * file-aware but layout-agnostic. The orchestrator owns folder conventions.
  */
 import * as fs from 'node:fs'
 import * as path from 'node:path'
@@ -23,8 +26,6 @@ export class KbPathError extends Error {
     this.name = 'KbPathError'
   }
 }
-
-const PILLARS = 'Pillars'
 
 const hasParentSegment = (p: string): boolean => p.split(/[\\/]/).includes('..')
 
@@ -54,6 +55,7 @@ const assertWithin = (root: string, candidate: string): void => {
 /**
  * Resolve and validate a single KB note path. Returns the realpath of the note
  * (the note itself need not exist yet, but its directory chain is realpath-ed).
+ * Confined under KB_ROOT when set; otherwise only absolute paths are accepted.
  */
 export const resolveKbNotePath = (kbPath: string): string => {
   if (kbPath.trim() === '') throw new KbPathError('kb_path must not be empty')
@@ -70,41 +72,10 @@ export const resolveKbNotePath = (kbPath: string): string => {
   }
 
   if (KB_ROOT !== undefined) {
-    const pillarsRoot = path.join(KB_ROOT, PILLARS)
-    assertWithin(pillarsRoot, resolved)
+    assertWithin(KB_ROOT, resolved)
     const real = realpathDeepestExisting(resolved)
-    assertWithin(realpathDeepestExisting(pillarsRoot), real)
+    assertWithin(realpathDeepestExisting(KB_ROOT), real)
     return real
   }
   return realpathDeepestExisting(resolved)
-}
-
-/**
- * The realpath of the `Pillars` directory that contains `noteAbsPath`. When
- * KB_ROOT is set it's `<KB_ROOT>/Pillars`; otherwise it's derived from the note
- * path by locating its `Pillars` ancestor segment. Used by the hierarchy tools
- * to anchor parent resolution.
- */
-export const pillarsRootForNote = (noteAbsPath: string): string => {
-  if (KB_ROOT !== undefined) return realpathDeepestExisting(path.join(KB_ROOT, PILLARS))
-  const parts = noteAbsPath.split(path.sep)
-  const idx = parts.lastIndexOf(PILLARS)
-  if (idx === -1) throw new KbPathError(`Cannot locate a "${PILLARS}" directory in path: ${noteAbsPath}`)
-  return parts.slice(0, idx + 1).join(path.sep)
-}
-
-/**
- * Resolve and validate the KB root for a tree walk. `root` defaults to KB_ROOT.
- * Returns `<root>/Pillars` (realpath-ed) — the directory the walker descends.
- */
-export const resolvePillarsRoot = (root?: string): string => {
-  const base = root ?? KB_ROOT
-  if (base === undefined || base.trim() === '') {
-    throw new KbPathError('No KB root given and MCP_NOTION_MIRROR_KB_ROOT is not set. Pass an absolute `root` or set the KB root.')
-  }
-  if (hasParentSegment(base)) throw new KbPathError(`root must not contain ".." segments: ${base}`)
-  if (!path.isAbsolute(base)) throw new KbPathError(`root must be an absolute path: ${base}`)
-  const resolved = path.normalize(base)
-  if (KB_ROOT !== undefined) assertWithin(KB_ROOT, resolved)
-  return realpathDeepestExisting(path.join(resolved, PILLARS))
 }

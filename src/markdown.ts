@@ -4,9 +4,9 @@
  * The body conversion is delegated to `@tryfabric/martian`
  * (`markdownToBlocks`), which handles paragraphs, headings, lists (incl.
  * nested), code fences, blockquotes, dividers, GFM tables, inline formatting,
- * and links. Two KB-specific transforms wrap it: stripping the frontmatter +
- * leading H1 (Notion takes the title from a page property), and prepending the
- * "Mirrored from KB" banner callout.
+ * and links. Two KB-specific transforms wrap it: stripping the frontmatter and
+ * a leading `# Title` H1 (Notion takes the title from a page property). The
+ * banner is prepended separately (see src/banner.ts) by the publish pipeline.
  *
  * Known gaps (tracked in ROADMAP.md): local image references render as their
  * alt-text paragraph rather than uploaded images, and `[[wikilinks]]` pass
@@ -14,9 +14,6 @@
  */
 import * as path from 'node:path'
 import { markdownToBlocks } from '@tryfabric/martian'
-import { BANNER_TEXT } from './config.js'
-
-const DEFAULT_BANNER_SUFFIX = " — canonical version lives in HNR's KB; feedback via comments here will be triaged back into the KB."
 
 const FRONTMATTER_RE = /^---\n[\s\S]*?\n---\n/
 
@@ -35,29 +32,8 @@ export const stripLeadingH1 = (text: string): string => {
 export const titleFromPath = (kbPath: string): string => path.basename(kbPath).replace(/\.md$/i, '')
 
 /**
- * The "Mirrored from Knowledge Base" callout. The bold prefix always carries
- * the runtime date (authoritative); MCP_NOTION_MIRROR_BANNER_TEXT, when set,
- * overrides the trailing sentence so a KB can reword it.
- */
-export const bannerBlock = (dateStr: string) => ({
-  object: 'block' as const,
-  type: 'callout' as const,
-  callout: {
-    icon: { type: 'emoji' as const, emoji: '📘' },
-    rich_text: [
-      { type: 'text' as const, text: { content: `Mirrored from Knowledge Base on ${dateStr}` }, annotations: { bold: true } },
-      { type: 'text' as const, text: { content: BANNER_TEXT ?? DEFAULT_BANNER_SUFFIX } }
-    ]
-  }
-})
-
-/**
- * Build the full child-block array for a new mirror page: banner first, then
- * the converted markdown body (frontmatter + leading H1 already stripped by
- * the caller). `martian` is run with `notionLimits.truncate` so per-block
+ * Convert a markdown body (frontmatter + leading H1 already stripped) to Notion
+ * blocks. `martian` is run with `notionLimits.truncate` so per-block
  * rich-text/character limits never produce an API-rejecting payload.
  */
-export const buildPageChildren = (markdownBody: string, dateStr: string): unknown[] => {
-  const blocks = markdownToBlocks(markdownBody, { notionLimits: { truncate: true } })
-  return [bannerBlock(dateStr), ...blocks]
-}
+export const bodyToBlocks = (markdownBody: string): unknown[] => markdownToBlocks(markdownBody, { notionLimits: { truncate: true } })
