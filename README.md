@@ -5,50 +5,74 @@ Notion and records the resulting Notion URL back into each note's YAML
 frontmatter.
 
 The KB is canonical; the Notion mirror is a derivative read surface for people
-who don't work in the KB. The server exposes **two layers** of tools:
+who don't work in the KB. The server exposes **three resources** of tools, all
+prefixed `kb_notion_mirror_` (the repo-derived app name):
 
-- **Per-note mirror tools** (`notion_mirror_*`) — act on one `kb_path` per call
-  and (for mutations) a Notion `parent` you supply. File-aware but
-  layout-agnostic: no directory walking, no parent resolution.
-- **Subtree orchestrator tools** (`notion_mirror_tree_*`) — walk a
-  caller-supplied `subtree` folder under the KB root, apply the folder-index
-  hierarchy convention, and attach the subtree's root under a caller-supplied
-  `parent`. They are built on top of the per-note tools.
+- **`note`** (`kb_notion_mirror_note_*`) — act on one `kb_path` per call and (for
+  mutations) a Notion `parent` you supply. File-aware but layout-agnostic: no
+  directory walking, no parent resolution.
+- **`tree`** (`kb_notion_mirror_tree_*`) — walk a caller-supplied `subtree`
+  folder under the KB root, apply the folder-index hierarchy convention, and
+  attach the subtree's root under a caller-supplied `parent`. Built on the note
+  verbs.
+- **`roots`** (`kb_notion_mirror_roots_list`) — pure discovery: list the folders
+  declared as mirror roots (`kb_notion_mirror_root` frontmatter) and the parent
+  each attaches under, so a client drives the `tree` verbs per root without
+  rescanning the KB.
 
-There is **no fixed root folder and no fixed wiki database**. Every operation
-takes the `subtree` to mirror and the `parent` it attaches under **per call** —
-so you can mirror any folder under any Notion parent.
+There is **no fixed root folder and no fixed wiki database**. Every mutation
+takes the `kb_path`/`subtree` and the `parent` it attaches under **per call** —
+so you can mirror any note or folder under any Notion parent.
 
-## What it does
+## The verb model
 
-Given a KB markdown note and a Notion parent, the publish path:
+Each resource shares one verb set (the `note`/`tree` columns show where a verb
+exists):
+
+| Verb        | note | tree | What it does                                                                                 |
+| ----------- | :--: | :--: | -------------------------------------------------------------------------------------------- |
+| `get`       |  ✅  |  —   | Fetch the **live** Notion page state. Pure read.                                             |
+| `status`    |  ✅  |  ✅  | Is it mirrored? (frontmatter only, no Notion call). Tree aggregates + orders.                |
+| `preflight` |  ✅  |  ✅  | Local readiness check (no Notion call). Tree adds the missing-folder-index check.            |
+| `touch`     |  ✅  |  ✅  | Create a body-less scaffold so the page URL becomes known for linking.† Idempotent.          |
+| `update`    |  ✅  |  ✅  | Push the body + resolve `[[wikilinks]]`. **Requires a prior `touch`.** URL preserved.        |
+| `move`      |  ✅  |  —   | Re-parent the page. URL/content unchanged.                                                   |
+| `delete`    |  ✅  |  ✅  | Archive the page + clear the mirror frontmatter. Destructive — `dry_run` defaults to `true`. |
+
+† The scaffold is a title + icon + banner, with no body — just enough for the
+page (and its URL) to exist.
+
+**Mirroring is two-phase by design.** There is no `create`: `touch` is how a
+page comes into existence (a scaffold with a stable URL), then `update` fills the
+body and turns `[[wikilinks]]` into `@`mentions. Splitting them guarantees every
+link target exists before any body renders — so the order is always
+**touch-all → update-all**.
+
+## What a touch / update does
+
+`touch`, given a note and a parent:
+
+1. Resolves the page title (the note's filename) and, under a database parent,
+   the database's title property.
+2. Prepends a "Mirrored from Knowledge Base" banner callout dated today.
+3. Creates the page (banner only — no body) under the `parent`.
+4. Writes `kb_notion_mirror_url` + `kb_notion_mirror_published_at` back into the
+   note's frontmatter (atomically, preserving field order and formatting).
+
+`update`, on a touched note:
 
 1. Strips the frontmatter and the leading `# Title` H1 (Notion takes the title
-   from a page property; the title is the note's filename).
+   from a page property).
 2. Converts the markdown body to Notion blocks via
    [`@tryfabric/martian`](https://github.com/tryfabric/martian) — paragraphs,
    headings, nested lists, code fences, blockquotes, dividers, GFM tables,
    inline formatting, links.
-3. Prepends a "Mirrored from Knowledge Base" banner callout dated with the
-   publish day.
-4. Creates (or replaces) the page under the `parent`.
-5. Writes `kb_notion_mirror_url` + `kb_notion_mirror_published_at` back into the
-   note's frontmatter (atomically, preserving field order and formatting).
-
-## Layering
-
-| Layer                                | Owns                                                                                                                                |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| **Per-note (`notion_mirror_*`)**     | Notion API plumbing · markdown→blocks · banner · reading/writing the `notion_mirror_*` frontmatter fields                           |
-| **Subtree (`notion_mirror_tree_*`)** | Walking a subtree · ordering the publish · resolving each note's parent by the folder-index convention · the two-pass wikilink loop |
-
-The subtree layer is layout-agnostic: it doesn't know about "Pillars" or any
-specific KB; you tell it which folder to mirror and which Notion parent to
-attach it under.
+3. Resolves `[[wikilinks]]` against the supplied `link_map` into `@`mentions.
+4. Replaces the page body **in place** (URL kept), sparing native child pages.
 
 ## The folder-index hierarchy convention
 
-The subtree tools encode one convention for turning a folder tree into a Notion
+The `tree` verbs encode one convention for turning a folder tree into a Notion
 page tree:
 
 - A folder's **index note** is `<Folder>/<Folder>.md` (its basename equals the
@@ -58,195 +82,98 @@ page tree:
 - The **subtree-root index** (the index of the `subtree` folder itself) attaches
   to the caller-supplied `parent`.
 
-So for `subtree = "Pillars/Engineering"` with parent = a wiki database:
+So for `subtree = "Alpha"` with parent = a wiki database:
 
 ```text
-Pillars/Engineering/Engineering.md          → page under the wiki database (the parent)
-Pillars/Engineering/Roadmap.md              → page under Engineering
-Pillars/Engineering/Bioweave/Bioweave.md    → page under Engineering
-Pillars/Engineering/Bioweave/DNS Scheme.md  → page under Bioweave
+Alpha/Alpha.md            → page under the wiki database (the parent)
+Alpha/Leaf.md             → page under Alpha
+Alpha/Beta/Beta.md        → page under Alpha
+Alpha/Beta/Gamma.md       → page under Beta
 ```
 
 Notes excluded from mirroring: any with `mirror: exclude` or
 `kb_notion_mirror_exclude` in frontmatter, any whose filename starts with a
 configured skip prefix (default `+`), and any kb-path in the configured skip
 list. When an exclude flag is set on a **folder index**, the whole subtree under
-that folder is pruned (so excluding a folder never orphans its children). See
-[Environment variables](#environment-variables).
+that folder is pruned (so excluding a folder never orphans its children).
 
-## Frontmatter-driven roots (CLI)
+## Roots: declared in the KB, driven by the client
 
-The publish CLI can discover its roots from the KB itself instead of taking a
-`--subtree`/`--parent` per call. Mark a folder index with:
+Mark a folder index as a mirror root:
 
 ```yaml
 kb_notion_mirror_root: 36f9f7187cc280f69272e60aa89bff24 # the Notion parent the root attaches under
 ```
 
-The value is the Notion parent: a wiki **database** id by default, or
-`page:<id>` to nest the root under a Notion page. Run the CLI **without**
-`--subtree` and it walks every declared root, rendering pass 2 with a single
-link map spanning all roots so cross-root `[[wikilinks]]` resolve to
-`@`mentions. A folder is mirrored iff it (or an ancestor) is a declared root —
-anything else is simply never walked.
+The value is the Notion parent: a wiki **database** id by default, `db:<id>`
+explicitly, or `page:<id>` to nest the root under a Notion page.
+`kb_notion_mirror_roots_list` discovers every such folder (pruning below a root —
+a root can't nest a root — and skipping excluded / skip-prefixed branches) and
+returns `[{ subtree, indexKbPath, parent }]`.
 
-```bash
-mcp-kb-notion-mirror-publish status          # every declared root
-mcp-kb-notion-mirror-publish publish --dry-run
-mcp-kb-notion-mirror-publish publish          # full two-pass run across all roots
-```
+This is **discovery only**. To mirror everything, a client calls `roots_list`
+then loops the `tree` verbs per root with the parent returned — so the MCP never
+does a frontmatter-driven batch mutation, and every mutation still takes an
+explicit parent. The publish CLI (below) ships this loop as a convenience,
+including the one-link-map-across-all-roots step so cross-root `[[wikilinks]]`
+resolve.
 
 ## Tools
 
-### `notion_mirror_publish(kb_path, parent, mode?, icon?, link_map?)` — write
+Thirteen tools across the three resources. `note` (7):
 
-Mirror one note under `parent` and record the URL in its frontmatter.
+- **`kb_notion_mirror_note_get(kb_path)`** — read. Live Notion page state, or
+  `{ exists: false, reason: "not-mirrored" }`.
+- **`kb_notion_mirror_note_status(kb_path)`** — read. `{ published, url?, published_at? }` from frontmatter; no Notion call.
+- **`kb_notion_mirror_note_preflight(kb_path)`** — read. `{ ok, issues }`; no Notion call.
+- **`kb_notion_mirror_note_touch(kb_path, parent, icon?)`** — write. Scaffold + write URL back. Idempotent → `{ skipped: true, existing_url }` when already mirrored, else `{ url, page_id, published_at }`.
+- **`kb_notion_mirror_note_update(kb_path, parent, icon?, link_map?)`** — write. Body push + wikilink resolution; `{ url, page_id, updated_at }`. Errors if not touched first.
+- **`kb_notion_mirror_note_move(kb_path, parent)`** — write. `{ moved: true, page_id, previous_parent, new_parent }`.
+- **`kb_notion_mirror_note_delete(kb_path, dry_run?)`** — destructive. Archive + clear frontmatter; `dry_run` default `true`.
 
-- `kb_path` (string) — the KB markdown note.
-- `parent` (object) — `{ type: "database_id", database_id }` or
-  `{ type: "page_id", page_id }`, passed to Notion verbatim. A database parent
-  creates a wiki row; a page parent creates a child page.
-- `mode` (`"create"` | `"replace"` | `"force"`, default `"create"`) — how to
-  handle an already-mirrored note (see
-  [When to use which mode](#when-to-use-which-mode)). A non-mirrored note is
-  created in every mode.
-- `force` (boolean, deprecated) — legacy alias for `mode: "force"`. Prefer
-  `mode`.
-- `icon` (object, optional) — `{ type: "emoji", emoji }` or
-  `{ type: "external", external: { url } }`, passed to Notion verbatim. Omit for
-  no icon.
-- `link_map` (object, optional) — maps a `[[target]]` string to that note's
-  mirror URL. Resolved wikilinks become Notion `@`mentions; unresolved ones
-  render as italic text. The per-note tool does not build this map; the subtree
-  tools do (see [Wikilinks](#wikilinks-link_map)).
+`tree` (5) — each takes `subtree` and (for mutations) `parent`; `touch`/`update`/`delete` accept an optional `kb_path` to act on just one note's ancestor chain:
 
-Returns `{ url, page_id, published_at, mode }`. For `replace`, `url` equals the
-pre-existing `kb_notion_mirror_url`. When already mirrored in `create` mode,
-returns `{ skipped: true, existing_url }`.
+- **`kb_notion_mirror_tree_status(subtree)`** / **`_preflight(subtree)`** — read.
+- **`kb_notion_mirror_tree_touch(subtree, parent, kb_path?)`** — write. Scaffold every note DFS so all URLs exist.
+- **`kb_notion_mirror_tree_update(subtree, parent, kb_path?, link_map?)`** — write. Push bodies; pass `link_map` to resolve **cross-root** wikilinks.
+- **`kb_notion_mirror_tree_delete(subtree, kb_path?, dry_run?)`** — destructive.
 
-**Side effect:** when `parent.type` is `"page_id"`, the parent's child-pages
-heading is refreshed (see [Child-pages footer](#child-pages-footer)).
+Tree verbs return `{ eligible, outcomes: NoteOutcome[] }` where `NoteOutcome` is
+`{ kbPath, action: "touch"|"update"|"delete"|"skip"|"plan"|"error", url?, error? }`.
 
-#### When to use which mode
+`roots` (1):
 
-| `mode`               | Already mirrored?                                             | URL after   |
-| -------------------- | ------------------------------------------------------------- | ----------- |
-| `"create"` (default) | Skip — `{ skipped: true, existing_url }`, no Notion call.     | unchanged   |
-| `"replace"`          | Update the page's body + properties **in place** (see below). | **kept**    |
-| `"force"`            | Archive the old page, create a new one.                       | **changes** |
+- **`kb_notion_mirror_roots_list()`** — read. `[{ subtree, indexKbPath, parent }]`.
 
-`replace` is for re-rendering a page without breaking inbound links — e.g. the
-second pass of wikilink resolution. It deletes the old body blocks and appends
-the new body **above** the page's native child links, then re-labels them with
-the `Child Pages` heading.
-
-> **Comment-loss caveat.** `replace` is body-destructive: Notion attaches
-> **block-level comments** to specific blocks, which `replace` deletes.
-> Page-level comments and child pages are preserved. Fold any block comments
-> back into the KB before a replace pass — the canonical KB body always wins.
-
-### `notion_mirror_move(kb_path, parent)` — write
-
-Re-parent the already-published mirror page to `parent`. Content and URL are
-unchanged; no frontmatter change. Returns
-`{ moved: true, page_id, previous_parent, new_parent }`.
-
-> **Caveat:** Notion cannot move a page between a `page_id` parent and a
-> `database_id` parent — `PATCH /v1/pages` silently ignores it. This tool
-> detects that case and errors clearly; use `unpublish` + `publish` instead.
-
-### `notion_mirror_unpublish(kb_path, dry_run?)` — destructive
-
-Archive the Notion page in `kb_notion_mirror_url` and clear the two mirror
-frontmatter fields.
-
-- `dry_run` (boolean, default `true`) — when true, report what _would_ happen
-  without calling Notion or editing the note.
-
-Dry run returns
-`{ dry_run: true, would_archive_url, would_archive_page_id, would_clear_fields }`.
-A real run returns `{ archived: true, page_id, url }`. A note with no
-`kb_notion_mirror_url` returns `{ archived: false, reason: "not-published" }`.
-
-> **Caveat:** archiving cascade-archives descendant pages on the Notion side.
-> This tool clears only the one note's frontmatter; descendants still point at
-> now-archived pages.
-
-### `notion_mirror_get(kb_path)` — read
-
-Fetch the live Notion page in `kb_notion_mirror_url`. Pure read. Returns
-`{ id, parent, title, created_time, last_edited_time, archived, url }`, or
-`{ exists: false, reason: "not-published" }`.
-
-### `notion_mirror_tree_status(subtree)` — read
-
-Report which notes in a subtree are already mirrored, ordered the way a publish
-would visit them.
-
-- `subtree` (string) — kb-relative folder to walk (e.g.
-  `"Pillars/Engineering"`).
-
-Returns `{ total, published, pending, notes: [{ kbPath, published }] }`. Pure
-read.
-
-### `notion_mirror_tree_preflight(subtree)` — read
-
-Check a subtree for structural issues that would force notes to be skipped —
-currently, folders that contain notes but lack a folder-index note.
-
-- `subtree` (string) — kb-relative folder to walk.
-
-Returns `{ issues: string[] }` — empty when the subtree is publish-ready. Pure
-read.
-
-### `notion_mirror_tree_publish(subtree, parent, kb_path?, dry_run?, pass?)` — destructive
-
-Mirror a whole subtree (or one note within it) to Notion, attaching the
-subtree-root index under `parent` and nesting the rest by the folder-index
-convention. Two passes: pass 1 creates pages, pass 2 replaces bodies to resolve
-`[[wikilinks]]` into `@`mentions. Destructive — defaults to a dry run.
-
-- `subtree` (string) — kb-relative folder to walk.
-- `parent` (object) — the Notion parent the subtree-root index attaches under,
-  same shape as `publish`.
-- `kb_path` (string, optional) — publish just this note (walking up its
-  unpublished ancestor indexes first) instead of the whole subtree.
-- `dry_run` (boolean, default `true`) — when true, compute outcomes without
-  calling Notion or editing notes.
-- `pass` (`"both"` | `"pass1"` | `"pass2"`, default `"both"`) — which pass(es)
-  to run for a whole-subtree publish (a single `kb_path` always runs both over
-  its ancestor chain).
-
-Returns, for a whole subtree,
-`{ eligible, pass1: NoteOutcome[], pass2: NoteOutcome[] }`; for a single note,
-`{ chain: string[], pass1, pass2 }`. Each `NoteOutcome` is
-`{ kbPath, action: "create"|"replace"|"skip"|"plan"|"error", url?, error? }`.
+> **Move/delete caveat.** Notion cannot move a page between a `page_id` parent
+> and a `database_id` parent — `PATCH /v1/pages` silently ignores it. `move`/
+> `update` detect that and error; use `delete` + `touch` instead. Archiving
+> cascade-archives descendant pages; `note delete` clears only the one note's
+> frontmatter — use `tree delete` to tear down a whole subtree.
 
 ## Wikilinks (`link_map`)
 
-KB notes use `[[target]]` / `[[target|display]]` wikilinks. The subtree tools
-build a `link_map` (target string → mirror URL) from every published note and
-pass it on each `replace` call, so each resolved `[[…]]` becomes a Notion page
-`@`mention; unresolved targets render as italic text. The per-note `publish`
-tool accepts a caller-supplied `link_map` directly.
+KB notes use `[[target]]` / `[[target|display]]` wikilinks. `update` takes a
+`link_map` (target string → mirror URL); each resolved `[[…]]` becomes a Notion
+page `@`mention and unresolved targets render as italic text. `tree_update`
+builds the map from the subtree automatically — pass an explicit `link_map`
+(e.g. one spanning every root, built from `roots_list` + `tree_status`) to
+resolve cross-root mentions.
 
-## Two-pass publishing
+## Two-phase publishing
 
-Wikilink `@`mentions need every target's URL to exist first, and those URLs must
-stay stable — so the subtree publish runs two passes:
+`@`mentions need every target's URL to exist first, and those URLs must stay
+stable — so a full publish is **touch-all then update-all**:
 
 ```text
-Pass 1 — create (URLs don't exist yet; wikilinks render italic)
-  for each note in tree order: publish mode "create"
-  → every note now has a stable kb_notion_mirror_url
-
-Pass 2 — replace (URLs are stable)
-  build link_map from every note's kb_notion_mirror_url
-  for each note: publish mode "replace" with link_map
-  → every [[X]] is now an @mention pointing at the right page
+touch  (URLs don't exist yet)
+  for each note in tree order: tree_touch  → every note gets a stable kb_notion_mirror_url
+update (URLs are stable)
+  build link_map from every note's URL
+  for each note: tree_update with link_map  → every [[X]] becomes an @mention
 ```
 
-`replace` updates the body in place, so the URLs other notes mention keep
+`update` replaces the body in place, so the URLs other notes mention keep
 resolving.
 
 ## Child-pages footer
@@ -254,52 +181,57 @@ resolving.
 Notion renders a parent's children inline as native `child_page` blocks. The
 footer is a single **"Child Pages"** `heading_2` placed immediately above those
 native child links, to label the section. Maintenance is automatic (no separate
-tool):
-
-- after `publish` under a `page_id` parent → that parent's heading is refreshed;
-- after a real `unpublish` of a page-parented child → that parent's heading is
-  refreshed;
-- after `move` → both the old and new page parents' headings are refreshed.
-
+tool): refreshed after a `touch`/`update`/`delete`/`move` touches a page parent.
 A refresh removes any prior heading, then — if the page has child pages —
 inserts one heading right before the first child-page block. Database parents
 need no heading.
 
 > **Mirror-only / sentinel.** The heading is **never** written into the KB
 > source. Its text is exactly `Child Pages` (a `heading_2`). Any future "read
-> the mirror back into the KB" path must recognise this sentinel heading and
-> strip it.
+> the mirror back into the KB" path must recognise this sentinel and strip it.
 
 ## Publish CLI
 
-The `mcp-kb-notion-mirror-publish` bin runs the same subtree orchestrator from
-the shell:
+The `mcp-kb-notion-mirror-publish` bin mirrors the tool surface as
+`<resource> <verb>` subcommands:
 
 ```bash
-mcp-kb-notion-mirror-publish status    --subtree Pillars/Engineering
-mcp-kb-notion-mirror-publish preflight --subtree Pillars/Engineering
-mcp-kb-notion-mirror-publish publish   --subtree Pillars/Engineering --parent-db <wiki-db-id> --dry-run
-mcp-kb-notion-mirror-publish publish   --subtree Pillars/Engineering --parent-page <page-id> Pillars/Engineering/Roadmap.md
-mcp-kb-notion-mirror-publish unpublish Pillars/Engineering/Roadmap.md --dry-run
+mcp-kb-notion-mirror-publish note status    Alpha/Alpha.md
+mcp-kb-notion-mirror-publish note touch      Alpha/Alpha.md --parent-db <wiki-db-id>
+mcp-kb-notion-mirror-publish note update     Alpha/Alpha.md --parent-db <wiki-db-id>
+mcp-kb-notion-mirror-publish note delete     Alpha/Alpha.md --dry-run
+
+mcp-kb-notion-mirror-publish tree status     Alpha
+mcp-kb-notion-mirror-publish tree preflight  Alpha
+mcp-kb-notion-mirror-publish tree touch      Alpha --parent-page <page-id>
+mcp-kb-notion-mirror-publish tree update     Alpha --parent-page <page-id> --note Alpha/Beta/Gamma.md
+
+mcp-kb-notion-mirror-publish roots list                 # every declared root + its parent
+mcp-kb-notion-mirror-publish roots publish              # touch-all then update-all across roots
+mcp-kb-notion-mirror-publish roots publish --dry-run
 ```
 
-It auto-loads `.env.local` and `.env` from the working directory. The
-`--subtree` and `--parent-db`/`--parent-page` flags are per invocation — they
-are not read from env.
+`roots publish` is the only place the **cross-root multi-step** lives: it touches
+every declared root, then updates them all with one link map spanning every root
+so cross-root `[[wikilinks]]` resolve. It auto-loads `.env.local` and `.env` from
+the working directory. Parents are per-invocation flags (or, for `roots`, read
+from `kb_notion_mirror_root` frontmatter) — never from env.
 
 ## Access levels
 
 Tools are gated by `MCP_KB_NOTION_MIRROR_ACCESS_LEVEL` (default `write`). Each
 level implies the lower ones:
 
-| Level         | Tools registered                                                                 |
-| ------------- | -------------------------------------------------------------------------------- |
-| `read`        | `notion_mirror_get`, `notion_mirror_tree_status`, `notion_mirror_tree_preflight` |
-| `write`       | the above + `notion_mirror_publish`, `notion_mirror_move`                        |
-| `destructive` | the above + `notion_mirror_unpublish`, `notion_mirror_tree_publish`              |
+| Level         | Tools registered                                           |
+| ------------- | ---------------------------------------------------------- |
+| `read`        | every `_get` / `_status` / `_preflight`, and `_roots_list` |
+| `write`       | the above + every `_touch` / `_update`, and `_note_move`   |
+| `destructive` | the above + every `_delete`                                |
 
-This server's whole purpose is mutating the mirror, so `write` is the practical
-baseline; the archive/bulk-publish tools additionally require `destructive`.
+Gating is driven by each tool's annotations (read-only / idempotent-write /
+destructive), not its name. This server's whole purpose is mutating the mirror,
+so `write` is the practical baseline; archive tools additionally require
+`destructive`.
 
 ## Setup
 
@@ -354,20 +286,20 @@ Restart Claude.
 | `MCP_KB_NOTION_MIRROR_ACCESS_LEVEL`        | no       | `write`                                           | `read` / `write` / `destructive`.                                                                |
 | `MCP_KB_NOTION_MIRROR_BANNER_TEMPLATE`     | no       | KB default                                        | Banner copy; `{date}` → today's UTC date; `**bold**` honoured. Empty string disables the banner. |
 | `MCP_KB_NOTION_MIRROR_API_BASE_URL`        | no       | `https://api.notion.com`                          | Notion API base URL.                                                                             |
-| `MCP_KB_NOTION_MIRROR_SKIP_PREFIXES`       | no       | `+`                                               | Comma-separated filename prefixes excluded from subtree publishing.                              |
-| `MCP_KB_NOTION_MIRROR_SKIP_PATHS`          | no       | (none)                                            | Comma-separated kb-paths excluded from subtree publishing.                                       |
+| `MCP_KB_NOTION_MIRROR_SKIP_PREFIXES`       | no       | `+`                                               | Comma-separated filename prefixes excluded from tree walking.                                    |
+| `MCP_KB_NOTION_MIRROR_SKIP_PATHS`          | no       | (none)                                            | Comma-separated kb-paths excluded from tree walking.                                             |
 | `MCP_KB_NOTION_MIRROR_ICON_BASE_URL`       | no       | `https://unpkg.com/lucide-static@latest/icons`    | Base URL for Lucide-style external page icons.                                                   |
 | `MCP_KB_NOTION_MIRROR_AUDIT_LOG`           | no       | `writes`                                          | Audit-log scope. `off` / `writes` / `all`.                                                       |
 | `MCP_KB_NOTION_MIRROR_AUDIT_LOG_PATH`      | no       | `~/.local/state/mcp-kb-notion-mirror/audit.jsonl` | Path to the JSONL audit log.                                                                     |
 | `MCP_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES` | no       | `10485760` (10 MiB)                               | Size-based rotation threshold in bytes. `0` disables rotation.                                   |
 | `MCP_KB_NOTION_MIRROR_AUDIT_LOG_KEEP`      | no       | `5`                                               | Number of rotated audit-log files to retain.                                                     |
 
-† The subtree orchestrator tools require `MCP_KB_NOTION_MIRROR_KB_ROOT`; the
-per-note tools work with absolute `kb_path`s when it is unset.
+† The `tree` and `roots` tools require `MCP_KB_NOTION_MIRROR_KB_ROOT`; the `note`
+tools work with absolute `kb_path`s when it is unset.
 
-The `subtree` and `parent` are always supplied per call (tool args / CLI flags),
-never via env. The Notion token is never written to logs, error messages, or
-tool output.
+The `subtree` and `parent` are always supplied per call (tool args / CLI flags);
+`roots` reads parents from `kb_notion_mirror_root` frontmatter. The Notion token
+is never written to logs, error messages, or tool output.
 
 ## Running locally
 
@@ -382,7 +314,7 @@ token to get started.
 
 ## Frontmatter contract
 
-Every publishable note has YAML frontmatter; this server touches **only** two
+Every mirrorable note has YAML frontmatter; this server touches **only** two
 fields and never reorders or reformats the rest:
 
 ```yaml
@@ -391,16 +323,16 @@ status: current — May 2026
 purpose: <one-line>
 notion_source_url: https://www.notion.so/<32hex>
 notion_path: Product & Eng / Platform Architecture / …
-kb_notion_mirror_url: https://www.notion.so/<slug>-<32hex> # written by this server
+kb_notion_mirror_url: https://www.notion.so/<slug>-<32hex> # written by this server (at touch)
 kb_notion_mirror_published_at: 2026-05-30T01:13:00Z # written by this server, ISO-8601 UTC
 ---
 ```
 
 New fields are inserted right after `notion_path` (falling back to
 `notion_source_url_secondary` / `notion_source_url`). A note with no frontmatter
-is an error. `notion_source_url`, `mirror:`, and any other field are read-only
-to this server (it only writes the two `notion_mirror_*` fields);
-`mirror: exclude` opts a note out of subtree publishing.
+is an error. `kb_notion_mirror_root` marks a folder index as a mirror root;
+`mirror: exclude` / `kb_notion_mirror_exclude` opts a note (or, on an index, a
+whole subtree) out. Every other field is read-only to this server.
 
 ## Roadmap
 

@@ -13,16 +13,22 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 
 // Single source of truth for the tool surface — kept in sync with
-// src/tools/mirror/index.ts, src/tools/tree/index.ts, and the access-level
-// tests. Add a tool → update both.
+// src/tools/{note,tree,roots}/index.ts and the access-level tests.
+// Add a tool → update both.
 const EXPECTED_TOOLS = [
-  'notion_mirror_publish',
-  'notion_mirror_unpublish',
-  'notion_mirror_move',
-  'notion_mirror_get',
-  'notion_mirror_tree_status',
-  'notion_mirror_tree_preflight',
-  'notion_mirror_tree_publish'
+  'kb_notion_mirror_note_get',
+  'kb_notion_mirror_note_status',
+  'kb_notion_mirror_note_preflight',
+  'kb_notion_mirror_note_touch',
+  'kb_notion_mirror_note_update',
+  'kb_notion_mirror_note_move',
+  'kb_notion_mirror_note_delete',
+  'kb_notion_mirror_tree_status',
+  'kb_notion_mirror_tree_preflight',
+  'kb_notion_mirror_tree_touch',
+  'kb_notion_mirror_tree_update',
+  'kb_notion_mirror_tree_delete',
+  'kb_notion_mirror_roots_list'
 ] as const
 
 const die = (msg: string, detail?: unknown): never => {
