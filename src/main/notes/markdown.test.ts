@@ -45,5 +45,27 @@ describe('markdown helpers', () => {
     it('returns an empty array for empty input', () => {
       expect(bodyToBlocks('')).toEqual([])
     })
+
+    const contentOf = (block: { [k: string]: { rich_text?: Array<{ text?: { content?: string } }> } }, type: string): string =>
+      (block[type]?.rich_text ?? []).map((r) => r.text?.content ?? '').join('')
+
+    it('folds a hard-wrapped paragraph back into one line', () => {
+      const blocks = bodyToBlocks('This paragraph was hard wrapped\nacross three\nsource lines.') as Array<{ type: string; [k: string]: unknown }>
+      const para = blocks.find((b) => b.type === 'paragraph') as never
+      expect(contentOf(para, 'paragraph')).toBe('This paragraph was hard wrapped across three source lines.')
+    })
+
+    it('folds wrapped list items but keeps item boundaries', () => {
+      const blocks = bodyToBlocks('- first item that\n  wraps a line\n- second item') as Array<{ type: string; [k: string]: unknown }>
+      const items = blocks.filter((b) => b.type === 'bulleted_list_item') as never[]
+      expect(contentOf(items[0], 'bulleted_list_item')).toBe('first item that wraps a line')
+      expect(contentOf(items[1], 'bulleted_list_item')).toBe('second item')
+    })
+
+    it('preserves newlines inside code blocks', () => {
+      const blocks = bodyToBlocks('```\nline one\nline two\n```') as Array<{ type: string; [k: string]: unknown }>
+      const code = blocks.find((b) => b.type === 'code') as never
+      expect(contentOf(code, 'code')).toBe('line one\nline two')
+    })
   })
 })
