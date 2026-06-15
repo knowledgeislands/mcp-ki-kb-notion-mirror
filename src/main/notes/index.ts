@@ -28,6 +28,7 @@ import {
   extractPageIdFromUrl,
   getBlockChildren,
   getPage,
+  type NotionBlock,
   type NotionIcon,
   type NotionParent,
   normalizePublishedAt,
@@ -117,7 +118,10 @@ const refreshFooterSafe = async (cfg: Config, parentPageId: string): Promise<voi
  * append-only API can't reorder, hence the insert-then-delete dance.
  */
 const replaceBody = async (cfg: Config, pageId: string, children: unknown[]): Promise<void> => {
-  const blocks = await getBlockChildren(cfg, pageId)
+  // Blocks Notion already archived are gone from the page — treat them as absent
+  // so we neither anchor appends on them nor try (and fail) to re-delete them.
+  const isArchived = (b: NotionBlock): boolean => b.archived === true || b.in_trash === true
+  const blocks = (await getBlockChildren(cfg, pageId)).filter((b) => !isArchived(b))
   // Anchor = the last block before the first child page (end of the old body).
   let anchor: string | undefined
   for (const block of blocks) {
@@ -128,7 +132,8 @@ const replaceBody = async (cfg: Config, pageId: string, children: unknown[]): Pr
     const ids = await appendBlockChildren(cfg, pageId, children.slice(i, i + MAX_CHILDREN_PER_REQUEST), anchor)
     anchor = ids[ids.length - 1]
   }
-  // Remove the old body + old footer heading, sparing real sub-pages.
+  // Remove the old body + old footer heading, sparing real sub-pages. deleteBlock
+  // is idempotent, so a block archived between the list and the delete is fine.
   for (const block of blocks) {
     if (block.type !== 'child_page') await deleteBlock(cfg, block.id)
   }

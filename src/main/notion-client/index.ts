@@ -232,6 +232,9 @@ export interface NotionBlock {
   id: string
   type: string
   child_page?: { title: string }
+  /** Soft-delete flags Notion sets on a trashed block; either rules it out of edits. */
+  archived?: boolean
+  in_trash?: boolean
   [k: string]: unknown
 }
 
@@ -269,7 +272,17 @@ export const appendBlockChildren = async (cfg: NotionConfig, blockId: string, ch
   return (resp.results ?? []).map((b) => b.id)
 }
 
-/** Delete (archive) a single block. */
+/**
+ * Delete (archive) a single block. Idempotent: a block Notion already considers
+ * archived is in the desired end state, so Notion's "Can't edit block that is
+ * archived" 400 is swallowed rather than propagated (re-deleting a gone block is
+ * a no-op success). Every other failure still throws.
+ */
 export const deleteBlock = async (cfg: NotionConfig, blockId: string): Promise<void> => {
-  await request(cfg, 'DELETE', `/v1/blocks/${normalizeId(blockId)}`)
+  try {
+    await request(cfg, 'DELETE', `/v1/blocks/${normalizeId(blockId)}`)
+  } catch (err) {
+    if (err instanceof NotionApiError && err.status === 400 && /archived/i.test(err.message)) return
+    throw err
+  }
 }

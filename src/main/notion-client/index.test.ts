@@ -187,6 +187,18 @@ describe('notion-client (mcp-kb-notion-mirror)', () => {
       expect(url).toBe(`https://api.notion.test/v1/blocks/${PAGE_HEX}`)
       expect(init.method).toBe('DELETE')
     })
+
+    it('deleteBlock swallows the "already archived" 400 (idempotent re-delete)', async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ code: 'validation_error', message: "Can't edit block that is archived. You must unarchive the block before editing." }), { status: 400 })
+      )
+      await expect(deleteBlock(cfg, PAGE_HEX)).resolves.toBeUndefined()
+    })
+
+    it('deleteBlock still throws on a non-archived failure', async () => {
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ code: 'validation_error', message: 'Some other validation problem.' }), { status: 400 }))
+      await expect(deleteBlock(cfg, PAGE_HEX)).rejects.toThrow(NotionApiError)
+    })
   })
 
   describe('error translation', () => {
