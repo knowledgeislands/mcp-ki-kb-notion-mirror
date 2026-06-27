@@ -52,7 +52,9 @@ console.error(`mcp-kb-notion-mirror starting...`)
 console.error(`  MCP_KB_NOTION_MIRROR_API_BASE_URL=${config.notionApiBaseUrl}`)
 console.error(`  MCP_KB_NOTION_MIRROR_KB_ROOT=${config.kbRoot ?? '(unset — kb_path must be absolute)'}`)
 console.error(`  MCP_KB_NOTION_MIRROR_ACCESS_LEVEL=${config.accessLevel}`)
-console.error(`  MCP_KB_NOTION_MIRROR_AUDIT_LOG=${config.auditLogMode}${config.auditLogMode === 'off' ? '' : ` (path: ${config.auditLogPath})`}`)
+console.error(
+  `  MCP_KB_NOTION_MIRROR_AUDIT_LOG=${config.auditLogMode}${config.auditLogMode === 'off' ? '' : ` (path: ${config.auditLogPath})`}`
+)
 
 const server = new McpServer({
   name: 'mcp-kb-notion-mirror',

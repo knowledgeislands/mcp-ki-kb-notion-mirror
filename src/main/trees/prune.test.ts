@@ -134,7 +134,9 @@ describe('prune', () => {
     const res = await pruneTree(cfg, 'Alpha', s, { dryRun: true })
     expect(fetchMock).not.toHaveBeenCalled()
     expect(res.eligible).toBe(2)
-    expect(res.outcomes.map((o) => ({ kbPath: o.kbPath, action: o.action, url: o.url })).sort((a, b) => a.kbPath.localeCompare(b.kbPath))).toEqual([
+    expect(
+      res.outcomes.map((o) => ({ kbPath: o.kbPath, action: o.action, url: o.url })).sort((a, b) => a.kbPath.localeCompare(b.kbPath))
+    ).toEqual([
       { kbPath: 'Alpha/Gone.md', action: 'plan', url: noteUrl(3) },
       { kbPath: 'Alpha/Keep.md', action: 'plan', url: noteUrl(2) }
     ])
@@ -204,7 +206,9 @@ describe('prune', () => {
     expect(res.outcomes.every((o) => o.action === 'delete')).toBe(true)
     // both orphan page ids were PATCH-archived
     const archived = fetchMock.mock.calls.map((c) => c[0] as string).filter((u) => u.includes('/v1/pages/'))
-    expect(archived).toEqual(expect.arrayContaining([`https://api.notion.test/v1/pages/${hex(2)}`, `https://api.notion.test/v1/pages/${hex(3)}`]))
+    expect(archived).toEqual(
+      expect.arrayContaining([`https://api.notion.test/v1/pages/${hex(2)}`, `https://api.notion.test/v1/pages/${hex(3)}`])
+    )
   })
 
   it('records an error outcome when Notion archival fails', async () => {

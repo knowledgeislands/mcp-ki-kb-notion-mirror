@@ -148,7 +148,9 @@ describe('loadConfig', () => {
     })
 
     it('expands ~/foo in the override', () => {
-      expect(load({ MCP_KB_NOTION_MIRROR_AUDIT_LOG_PATH: '~/foo/audit.jsonl' }).auditLogPath).toBe(path.join(os.homedir(), 'foo', 'audit.jsonl'))
+      expect(load({ MCP_KB_NOTION_MIRROR_AUDIT_LOG_PATH: '~/foo/audit.jsonl' }).auditLogPath).toBe(
+        path.join(os.homedir(), 'foo', 'audit.jsonl')
+      )
     })
 
     it('passes absolute paths through unchanged', () => {

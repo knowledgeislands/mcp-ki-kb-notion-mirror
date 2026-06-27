@@ -10,7 +10,13 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-notion-mirror)', () => {
 
   // The audit-log module keeps internal state (chmodEnsured, the append queue),
   // so reset modules per test for isolation. Config is passed in explicitly.
-  const auditCfg = (o: Partial<AuditConfig> = {}): AuditConfig => ({ mode: 'writes', path: logPath, maxBytes: 10 * 1024 * 1024, keep: 5, ...o })
+  const auditCfg = (o: Partial<AuditConfig> = {}): AuditConfig => ({
+    mode: 'writes',
+    path: logPath,
+    maxBytes: 10 * 1024 * 1024,
+    keep: 5,
+    ...o
+  })
 
   beforeEach(async () => {
     await fs.mkdir(tmpDir, { recursive: true })
@@ -34,7 +40,9 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-notion-mirror)', () => {
 
   it('logs write-level tools by default (writes mode)', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog(auditCfg(), 'kb_notion_mirror_note_touch', 'write', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
+    const wrapped = withAuditLog(auditCfg(), 'kb_notion_mirror_note_touch', 'write', async () => ({
+      content: [{ type: 'text', text: 'ok' }]
+    }))
     await wrapped({ kb_path: 'x.md', mode: 'create' })
     await flushAsync()
     const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
@@ -47,7 +55,9 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-notion-mirror)', () => {
 
   it('logs read-level tools when audit mode is "all"', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog(auditCfg({ mode: 'all' }), 'kb_notion_mirror_note_get', 'read', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
+    const wrapped = withAuditLog(auditCfg({ mode: 'all' }), 'kb_notion_mirror_note_get', 'read', async () => ({
+      content: [{ type: 'text', text: 'ok' }]
+    }))
     await wrapped({ kb_path: 'x.md' })
     await flushAsync()
     const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
@@ -57,7 +67,10 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-notion-mirror)', () => {
 
   it('records ok:false when isError:true', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog(auditCfg(), 'kb_notion_mirror_note_touch', 'write', async () => ({ isError: true, content: [{ type: 'text', text: 'bad path' }] }))
+    const wrapped = withAuditLog(auditCfg(), 'kb_notion_mirror_note_touch', 'write', async () => ({
+      isError: true,
+      content: [{ type: 'text', text: 'bad path' }]
+    }))
     await wrapped({})
     await flushAsync()
     const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
@@ -99,14 +112,21 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-notion-mirror)', () => {
 
   it('returns a non-error result envelope on success', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog(auditCfg(), 'kb_notion_mirror_note_touch', 'write', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
+    const wrapped = withAuditLog(auditCfg(), 'kb_notion_mirror_note_touch', 'write', async () => ({
+      content: [{ type: 'text', text: 'ok' }]
+    }))
     const result = (await wrapped({})) as { content: Array<{ type: string; text: string }> }
     expect(result.content[0]?.text).toBe('ok')
   })
 
   it('handles missing content array on isError results', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog(auditCfg(), 'kb_notion_mirror_note_touch', 'write', async () => ({ isError: true }) as unknown as { content: { type: string; text: string }[] })
+    const wrapped = withAuditLog(
+      auditCfg(),
+      'kb_notion_mirror_note_touch',
+      'write',
+      async () => ({ isError: true }) as unknown as { content: { type: string; text: string }[] }
+    )
     await wrapped({})
     await flushAsync()
     const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
@@ -120,7 +140,9 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-notion-mirror)', () => {
     expect(((await fs.stat(logPath)).mode & 0o777).toString(8)).toBe('644')
 
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog(auditCfg(), 'kb_notion_mirror_note_touch', 'write', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
+    const wrapped = withAuditLog(auditCfg(), 'kb_notion_mirror_note_touch', 'write', async () => ({
+      content: [{ type: 'text', text: 'ok' }]
+    }))
     await wrapped({})
     await flushAsync()
 
@@ -129,7 +151,9 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-notion-mirror)', () => {
 
   it('truncates oversized argument payloads with a _truncated marker', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog(auditCfg(), 'kb_notion_mirror_note_touch', 'write', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
+    const wrapped = withAuditLog(auditCfg(), 'kb_notion_mirror_note_touch', 'write', async () => ({
+      content: [{ type: 'text', text: 'ok' }]
+    }))
     await wrapped({ blob: 'x'.repeat(8000) })
     await flushAsync()
     const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
@@ -139,7 +163,9 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-notion-mirror)', () => {
 
   it('rotates the audit log when it exceeds maxBytes', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog(auditCfg({ maxBytes: 64 }), 'kb_notion_mirror_note_touch', 'write', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
+    const wrapped = withAuditLog(auditCfg({ maxBytes: 64 }), 'kb_notion_mirror_note_touch', 'write', async () => ({
+      content: [{ type: 'text', text: 'ok' }]
+    }))
     await wrapped({ kb_path: 'a.md' })
     await flushAsync()
     await wrapped({ kb_path: 'b.md' })
@@ -150,7 +176,9 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-notion-mirror)', () => {
 
   it('discards the live log when keep=0', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog(auditCfg({ maxBytes: 64, keep: 0 }), 'kb_notion_mirror_note_touch', 'write', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
+    const wrapped = withAuditLog(auditCfg({ maxBytes: 64, keep: 0 }), 'kb_notion_mirror_note_touch', 'write', async () => ({
+      content: [{ type: 'text', text: 'ok' }]
+    }))
     await wrapped({ kb_path: 'a.md' })
     await flushAsync()
     await wrapped({ kb_path: 'b.md' })
@@ -163,7 +191,9 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-notion-mirror)', () => {
     await fs.writeFile(`${logPath}.1`, 'prior-rotation\n', { mode: 0o600 })
 
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog(auditCfg({ maxBytes: 64, keep: 3 }), 'kb_notion_mirror_note_touch', 'write', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
+    const wrapped = withAuditLog(auditCfg({ maxBytes: 64, keep: 3 }), 'kb_notion_mirror_note_touch', 'write', async () => ({
+      content: [{ type: 'text', text: 'ok' }]
+    }))
     await wrapped({ kb_path: 'a.md' })
     await flushAsync()
     await wrapped({ kb_path: 'b.md' })
@@ -175,7 +205,9 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-notion-mirror)', () => {
 
   it('is a no-op when maxBytes=0 (rotation disabled)', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog(auditCfg({ maxBytes: 0 }), 'kb_notion_mirror_note_touch', 'write', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
+    const wrapped = withAuditLog(auditCfg({ maxBytes: 0 }), 'kb_notion_mirror_note_touch', 'write', async () => ({
+      content: [{ type: 'text', text: 'ok' }]
+    }))
     await wrapped({ kb_path: 'a.md' })
     await flushAsync()
     await wrapped({ kb_path: 'b.md' })
@@ -185,7 +217,9 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-notion-mirror)', () => {
 
   it('redacts URL credentials throughout the args (string, array, nested object) and preserves primitives', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog(auditCfg({ mode: 'all' }), 'kb_notion_mirror_note_get', 'read', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
+    const wrapped = withAuditLog(auditCfg({ mode: 'all' }), 'kb_notion_mirror_note_get', 'read', async () => ({
+      content: [{ type: 'text', text: 'ok' }]
+    }))
     await wrapped({
       url: 'https://user:hunter2@notion.example.com/path',
       list: ['postgres://admin:s3cret@db.example.com/kb'],
@@ -213,7 +247,9 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-notion-mirror)', () => {
     await fs.chmod(path.dirname(badPath), 0o500)
 
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog(auditCfg({ path: badPath }), 'kb_notion_mirror_note_touch', 'write', async () => ({ content: [{ type: 'text', text: 'ok' }] }))
+    const wrapped = withAuditLog(auditCfg({ path: badPath }), 'kb_notion_mirror_note_touch', 'write', async () => ({
+      content: [{ type: 'text', text: 'ok' }]
+    }))
     const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {})
     const result = (await wrapped({})) as { content: Array<{ type: string; text: string }> }
     expect(result.content[0]?.text).toBe('ok')

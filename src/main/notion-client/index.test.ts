@@ -51,14 +51,24 @@ describe('notion-client (mcp-kb-notion-mirror)', () => {
       const [url, init] = fetchMock.mock.calls[0] ?? []
       expect(url).toBe(`https://api.notion.test/v1/databases/${DB_ID}`)
       expect(init.method).toBe('GET')
-      expect(init.headers).toMatchObject({ Authorization: 'Bearer ntn_secrettoken', 'Notion-Version': '2022-06-28', Accept: 'application/json', 'Content-Type': 'application/json' })
+      expect(init.headers).toMatchObject({
+        Authorization: 'Bearer ntn_secrettoken',
+        'Notion-Version': '2022-06-28',
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      })
     })
   })
 
   describe('createPage', () => {
     it('creates a database-parented page with the named title property', async () => {
       fetchMock.mockResolvedValueOnce(ok(PAGE_RESPONSE))
-      const result = await createPage(cfg, { parent: { type: 'database_id', database_id: DB_ID }, titleProperty: 'Page', title: 'My Note', children: [{ a: 1 }, { b: 2 }] })
+      const result = await createPage(cfg, {
+        parent: { type: 'database_id', database_id: DB_ID },
+        titleProperty: 'Page',
+        title: 'My Note',
+        children: [{ a: 1 }, { b: 2 }]
+      })
       expect(result).toEqual({ id: PAGE_RESPONSE.id, url: PAGE_RESPONSE.url, created_time: PAGE_RESPONSE.created_time })
       const [url, init] = fetchMock.mock.calls[0] ?? []
       expect(url).toBe('https://api.notion.test/v1/pages')
@@ -78,14 +88,21 @@ describe('notion-client (mcp-kb-notion-mirror)', () => {
 
     it('includes the icon in the POST body and never sends a format field', async () => {
       fetchMock.mockResolvedValueOnce(ok(PAGE_RESPONSE))
-      await createPage(cfg, { parent: { type: 'page_id', page_id: PAGE_HEX }, title: 'C', children: [{ a: 1 }], icon: { type: 'emoji', emoji: '📚' } })
+      await createPage(cfg, {
+        parent: { type: 'page_id', page_id: PAGE_HEX },
+        title: 'C',
+        children: [{ a: 1 }],
+        icon: { type: 'emoji', emoji: '📚' }
+      })
       const body = JSON.parse(fetchMock.mock.calls[0]?.[1].body)
       expect(body.icon).toEqual({ type: 'emoji', emoji: '📚' })
       expect(body.format).toBeUndefined()
     })
 
     it('throws when a database parent is given without a title property name', async () => {
-      await expect(createPage(cfg, { parent: { type: 'database_id', database_id: DB_ID }, title: 'x', children: [] })).rejects.toThrow(NotionApiError)
+      await expect(createPage(cfg, { parent: { type: 'database_id', database_id: DB_ID }, title: 'x', children: [] })).rejects.toThrow(
+        NotionApiError
+      )
       expect(fetchMock).not.toHaveBeenCalled()
     })
 
@@ -190,20 +207,30 @@ describe('notion-client (mcp-kb-notion-mirror)', () => {
 
     it('deleteBlock swallows the "already archived" 400 (idempotent re-delete)', async () => {
       fetchMock.mockResolvedValueOnce(
-        new Response(JSON.stringify({ code: 'validation_error', message: "Can't edit block that is archived. You must unarchive the block before editing." }), { status: 400 })
+        new Response(
+          JSON.stringify({
+            code: 'validation_error',
+            message: "Can't edit block that is archived. You must unarchive the block before editing."
+          }),
+          { status: 400 }
+        )
       )
       await expect(deleteBlock(cfg, PAGE_HEX)).resolves.toBeUndefined()
     })
 
     it('deleteBlock still throws on a non-archived failure', async () => {
-      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ code: 'validation_error', message: 'Some other validation problem.' }), { status: 400 }))
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ code: 'validation_error', message: 'Some other validation problem.' }), { status: 400 })
+      )
       await expect(deleteBlock(cfg, PAGE_HEX)).rejects.toThrow(NotionApiError)
     })
   })
 
   describe('error translation', () => {
     it('throws NotionApiError with status + code + message, never leaking the token', async () => {
-      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ code: 'unauthorized', message: 'API token is invalid.' }), { status: 401 }))
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ code: 'unauthorized', message: 'API token is invalid.' }), { status: 401 })
+      )
       const err = await archivePage(cfg, PAGE_HEX).catch((e) => e)
       expect(err).toBeInstanceOf(NotionApiError)
       expect(err.status).toBe(401)

@@ -71,7 +71,12 @@ const request = async <T>(cfg: NotionConfig, method: 'GET' | 'POST' | 'PATCH' | 
       // non-JSON error body — fall back to the raw text
     }
     const snippet = detail.length > 500 ? `${detail.slice(0, 500)}…` : detail
-    throw new NotionApiError(resp.status, text, code, `Notion ${method} ${apiPath} → HTTP ${resp.status}${code ? ` (${code})` : ''}: ${snippet}`)
+    throw new NotionApiError(
+      resp.status,
+      text,
+      code,
+      `Notion ${method} ${apiPath} → HTTP ${resp.status}${code ? ` (${code})` : ''}: ${snippet}`
+    )
   }
   try {
     return JSON.parse(text) as T
@@ -93,7 +98,12 @@ export const normalizeId = (id: string): string => {
   const lower = id.toLowerCase()
   if (BARE_ID_RE.test(lower)) return lower
   if (DASHED_ID_RE.test(lower)) return lower.replace(/-/g, '')
-  throw new NotionApiError(0, '', 'invalid_id', `Refusing to call Notion with a malformed id: "${id}" (expected 32 hex chars or a dashed UUID)`)
+  throw new NotionApiError(
+    0,
+    '',
+    'invalid_id',
+    `Refusing to call Notion with a malformed id: "${id}" (expected 32 hex chars or a dashed UUID)`
+  )
 }
 
 /** Pull the 32-hex page id out of a notion.so URL (handles slug + query suffixes). */
@@ -116,7 +126,8 @@ export interface NotionDatabase {
 }
 
 /** Raw `GET /v1/databases/{id}`. The title-property cache lives in title-property.ts. */
-export const getDatabase = (cfg: NotionConfig, databaseId: string): Promise<NotionDatabase> => request<NotionDatabase>(cfg, 'GET', `/v1/databases/${normalizeId(databaseId)}`)
+export const getDatabase = (cfg: NotionConfig, databaseId: string): Promise<NotionDatabase> =>
+  request<NotionDatabase>(cfg, 'GET', `/v1/databases/${normalizeId(databaseId)}`)
 
 interface NotionPageResponse {
   id: string
@@ -166,9 +177,16 @@ const titleProperties = (parent: NotionParent, title: string, titleProperty: str
  * parent (where the title property is always the reserved `title`). `icon` (if
  * given) is set in the SAME create call — never a separate PATCH.
  */
-export const createPage = async (cfg: NotionConfig, params: { parent: NotionParent; title: string; children: unknown[]; titleProperty?: string; icon?: NotionIcon }): Promise<CreatedPage> => {
+export const createPage = async (
+  cfg: NotionConfig,
+  params: { parent: NotionParent; title: string; children: unknown[]; titleProperty?: string; icon?: NotionIcon }
+): Promise<CreatedPage> => {
   const { parent, title, children, titleProperty, icon } = params
-  const base: Record<string, unknown> = { parent, properties: titleProperties(parent, title, titleProperty), children: children.slice(0, MAX_CHILDREN_PER_REQUEST) }
+  const base: Record<string, unknown> = {
+    parent,
+    properties: titleProperties(parent, title, titleProperty),
+    children: children.slice(0, MAX_CHILDREN_PER_REQUEST)
+  }
   if (icon) base.icon = icon
   const page = await request<NotionPageResponse>(cfg, 'POST', '/v1/pages', base)
   for (let i = MAX_CHILDREN_PER_REQUEST; i < children.length; i += MAX_CHILDREN_PER_REQUEST) {
@@ -182,7 +200,11 @@ export const createPage = async (cfg: NotionConfig, params: { parent: NotionPare
  * PATCH). Does NOT touch the page body — callers replace block children
  * separately. Returns the page's id/url/last_edited_time.
  */
-export const updatePage = async (cfg: NotionConfig, pageId: string, params: { parent: NotionParent; title: string; titleProperty?: string; icon?: NotionIcon }): Promise<UpdatedPage> => {
+export const updatePage = async (
+  cfg: NotionConfig,
+  pageId: string,
+  params: { parent: NotionParent; title: string; titleProperty?: string; icon?: NotionIcon }
+): Promise<UpdatedPage> => {
   const { parent, title, titleProperty, icon } = params
   const base: Record<string, unknown> = { parent, properties: titleProperties(parent, title, titleProperty) }
   if (icon) base.icon = icon

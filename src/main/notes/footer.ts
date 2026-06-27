@@ -24,7 +24,9 @@ import { appendBlockChildren, deleteBlock, getBlockChildren, type NotionBlock, t
 export const SENTINEL_TEXT = 'Child Pages'
 
 /** The footer: a single "Child Pages" sentinel heading. */
-export const buildFooterBlocks = (): Record<string, unknown>[] => [{ object: 'block', type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: SENTINEL_TEXT } }] } }]
+export const buildFooterBlocks = (): Record<string, unknown>[] => [
+  { object: 'block', type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: SENTINEL_TEXT } }] } }
+]
 
 const blockText = (block: NotionBlock): string => {
   const rt = (block[block.type] as { rich_text?: Array<{ plain_text?: string }> } | undefined)?.rich_text

@@ -41,7 +41,12 @@ const GIT_LOCAL_TIMEOUT_MS = 8000
  * bounds the call so a wedged git can't pin the server. Throws on non-zero exit.
  */
 const git = (kbRoot: string, args: string[]): string =>
-  execFileSync('git', ['--no-optional-locks', '-c', 'core.quotePath=false', ...args], { cwd: kbRoot, encoding: 'utf-8', maxBuffer: 256 * 1024 * 1024, timeout: GIT_LOCAL_TIMEOUT_MS })
+  execFileSync('git', ['--no-optional-locks', '-c', 'core.quotePath=false', ...args], {
+    cwd: kbRoot,
+    encoding: 'utf-8',
+    maxBuffer: 256 * 1024 * 1024,
+    timeout: GIT_LOCAL_TIMEOUT_MS
+  })
 
 const ensureGitRepo = (kbRoot: string): void => {
   try {
@@ -177,7 +182,9 @@ const prune = async (cfg: Config, s: MirrorSettings, opts: { subtree?: string; d
  * (default true at the tool boundary) reports what would be archived without
  * calling Notion.
  */
-export const pruneTree = (cfg: Config, subtree: string, s: MirrorSettings, opts: { dryRun: boolean }): Promise<TreeResult> => prune(cfg, s, { subtree, dryRun: opts.dryRun })
+export const pruneTree = (cfg: Config, subtree: string, s: MirrorSettings, opts: { dryRun: boolean }): Promise<TreeResult> =>
+  prune(cfg, s, { subtree, dryRun: opts.dryRun })
 
 /** Archive orphaned mirror pages across the whole KB (every deleted note, any root). */
-export const pruneRoots = (cfg: Config, s: MirrorSettings, opts: { dryRun: boolean }): Promise<TreeResult> => prune(cfg, s, { dryRun: opts.dryRun })
+export const pruneRoots = (cfg: Config, s: MirrorSettings, opts: { dryRun: boolean }): Promise<TreeResult> =>
+  prune(cfg, s, { dryRun: opts.dryRun })

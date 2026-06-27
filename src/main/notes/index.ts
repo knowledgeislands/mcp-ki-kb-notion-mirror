@@ -76,9 +76,13 @@ export interface BaselineOptions {
 
 export type TouchResult = { url: string; page_id: string; published_at: string } | { skipped: true; existing_url: string }
 
-export type UpdateResult = { url: string; page_id: string; updated_at: string; hash: string } | { skipped: true; url: string; page_id: string; hash: string }
+export type UpdateResult =
+  | { url: string; page_id: string; updated_at: string; hash: string }
+  | { skipped: true; url: string; page_id: string; hash: string }
 
-export type BaselineResult = { baselined: true; url: string; hash: string; published_at: string } | { skipped: true; reason: 'not-mirrored' }
+export type BaselineResult =
+  | { baselined: true; url: string; hash: string; published_at: string }
+  | { skipped: true; reason: 'not-mirrored' }
 
 export type DeleteResult =
   | { archived: true; page_id: string; url: string }
@@ -88,7 +92,15 @@ export type DeleteResult =
 export type MoveResult = { moved: true; page_id: string; previous_parent: Record<string, unknown>; new_parent: NotionParent }
 
 export type GetResult =
-  | { id: string; parent: Record<string, unknown>; title: string; created_time: string; last_edited_time: string; archived: boolean; url: string }
+  | {
+      id: string
+      parent: Record<string, unknown>
+      title: string
+      created_time: string
+      last_edited_time: string
+      archived: boolean
+      url: string
+    }
   | { exists: false; reason: string }
 
 export type StatusResult = { published: true; url: string; published_at: string | undefined } | { published: false }
@@ -96,7 +108,8 @@ export type StatusResult = { published: true; url: string; published_at: string 
 export type PreflightResult = { ok: boolean; issues: string[] }
 
 /** The page id of a Notion page parent, or undefined for a database/other parent. */
-const pageParentId = (parent: Record<string, unknown>): string | undefined => (parent.type === 'page_id' ? (parent.page_id as string) : undefined)
+const pageParentId = (parent: Record<string, unknown>): string | undefined =>
+  parent.type === 'page_id' ? (parent.page_id as string) : undefined
 
 /**
  * Refresh a parent's child-pages footer without ever failing the primary op —
@@ -207,7 +220,9 @@ export const updateNote = async (cfg: Config, kbPath: string, parent: NotionPare
   if (before.parent.type !== parent.type) {
     const after = await getPage(cfg, pageId)
     if (JSON.stringify(after.parent) === JSON.stringify(before.parent)) {
-      throw new Error('Notion silently ignored the parent change in update mode — cannot move between page-id and database-id parents. Delete the note, then touch it again under the new parent.')
+      throw new Error(
+        'Notion silently ignored the parent change in update mode — cannot move between page-id and database-id parents. Delete the note, then touch it again under the new parent.'
+      )
     }
   }
   await replaceBody(cfg, pageId, children)
@@ -233,7 +248,12 @@ export const updateNote = async (cfg: Config, kbPath: string, parent: NotionPare
  * reflect the note (e.g. straight after a full publish) — it asserts "this is the
  * synced state" so subsequent publishes skip it. Unmirrored notes are left alone.
  */
-export const baselineNote = async (cfg: Config, kbPath: string, parent: NotionParent, options: BaselineOptions = {}): Promise<BaselineResult> => {
+export const baselineNote = async (
+  cfg: Config,
+  kbPath: string,
+  parent: NotionParent,
+  options: BaselineOptions = {}
+): Promise<BaselineResult> => {
   const { abs, raw, fields, hasFrontmatter, body } = await readFullNote(cfg, kbPath)
   if (!hasFrontmatter) throw new Error('Note has no YAML frontmatter; refusing to mirror.')
 
@@ -290,7 +310,9 @@ export const moveNote = async (cfg: Config, kbPath: string, parent: NotionParent
   if (before.parent.type !== parent.type) {
     const after = await getPage(cfg, pageId)
     if (JSON.stringify(after.parent) === JSON.stringify(before.parent)) {
-      throw new Error('Notion silently ignored the parent change — cannot move between page-id and database-id parents. Use delete + touch instead.')
+      throw new Error(
+        'Notion silently ignored the parent change — cannot move between page-id and database-id parents. Use delete + touch instead.'
+      )
     }
   }
 

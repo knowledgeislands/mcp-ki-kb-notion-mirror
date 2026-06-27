@@ -149,6 +149,17 @@ export const loadMirrorSettings = (env: NodeJS.ProcessEnv = process.env): Mirror
 })
 
 /**
+ * Resolve the KB root path from env. Returns `undefined` when the var is
+ * absent or empty. Home-dir expansion and `path.resolve` are applied, matching
+ * what `loadConfig` does for the same var.
+ *
+ * Exported so the CLI's local-only verbs (note/tree status, preflight) can read
+ * just this one var without requiring the Notion token that full `loadConfig`
+ * demands — env is still read only here, inside config/.
+ */
+export const loadKbRoot = (env: NodeJS.ProcessEnv = process.env): string | undefined => resolveKbRoot(env.MCP_KB_NOTION_MIRROR_KB_ROOT)
+
+/**
  * Resolve + validate the Notion API base URL. SSRF discipline (standard §6 /
  * §13.5): the base must parse as an `https:` URL — a non-HTTPS or unparseable
  * value is rejected so a misconfigured base can never downgrade to plaintext or
@@ -164,7 +175,9 @@ const parseNotionApiBaseUrl = (raw: string | undefined): string => {
     throw new Error(`Invalid MCP_KB_NOTION_MIRROR_API_BASE_URL="${raw}" — must be a valid absolute URL.`)
   }
   if (url.protocol !== 'https:') {
-    throw new Error(`Invalid MCP_KB_NOTION_MIRROR_API_BASE_URL="${raw}" — must use https: (got "${url.protocol}"). The Notion token is sent as a Bearer header; plaintext is rejected.`)
+    throw new Error(
+      `Invalid MCP_KB_NOTION_MIRROR_API_BASE_URL="${raw}" — must use https: (got "${url.protocol}"). The Notion token is sent as a Bearer header; plaintext is rejected.`
+    )
   }
   return trimmed
 }
@@ -191,8 +204,16 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): Config => {
     mirror: loadMirrorSettings(env),
     accessLevel: parseAccessLevel(env.MCP_KB_NOTION_MIRROR_ACCESS_LEVEL),
     auditLogMode: parseAuditLogMode(env.MCP_KB_NOTION_MIRROR_AUDIT_LOG),
-    auditLogPath: path.resolve(expandHome(env.MCP_KB_NOTION_MIRROR_AUDIT_LOG_PATH ?? path.join(os.homedir(), '.local', 'state', 'mcp-kb-notion-mirror', 'audit.jsonl'))),
-    auditLogMaxBytes: parseNonNegativeInt(env.MCP_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES, 10 * 1024 * 1024, 'MCP_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES'),
+    auditLogPath: path.resolve(
+      expandHome(
+        env.MCP_KB_NOTION_MIRROR_AUDIT_LOG_PATH ?? path.join(os.homedir(), '.local', 'state', 'mcp-kb-notion-mirror', 'audit.jsonl')
+      )
+    ),
+    auditLogMaxBytes: parseNonNegativeInt(
+      env.MCP_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES,
+      10 * 1024 * 1024,
+      'MCP_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES'
+    ),
     auditLogKeep: parseNonNegativeInt(env.MCP_KB_NOTION_MIRROR_AUDIT_LOG_KEEP, 5, 'MCP_KB_NOTION_MIRROR_AUDIT_LOG_KEEP')
   }
 }

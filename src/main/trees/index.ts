@@ -65,7 +65,11 @@ export const preflightTree = (kbRoot: string, subtree: string, s: MirrorSettings
 }
 
 /** A published/pending listing, ordered like a tree op would visit the notes. */
-export const statusTree = (kbRoot: string, subtree: string, s: MirrorSettings): { total: number; published: number; pending: number; notes: { kbPath: string; published: boolean }[] } => {
+export const statusTree = (
+  kbRoot: string,
+  subtree: string,
+  s: MirrorSettings
+): { total: number; published: number; pending: number; notes: { kbPath: string; published: boolean }[] } => {
   const ordered = publishOrder(kbRoot, subtree, s, discover(kbRoot, subtree, s))
   let published = 0
   let pending = 0
@@ -194,7 +198,13 @@ export const updateTree = async (
   subtree: string,
   parent: NotionParent,
   s: MirrorSettings,
-  opts: { kbPath?: string; linkMap?: Record<string, string>; force?: boolean; verify?: boolean; onProgress?: (o: NoteOutcome, done: number, total: number) => void } = {}
+  opts: {
+    kbPath?: string
+    linkMap?: Record<string, string>
+    force?: boolean
+    verify?: boolean
+    onProgress?: (o: NoteOutcome, done: number, total: number) => void
+  } = {}
 ): Promise<TreeResult> => {
   const kbRoot = requireRoot(cfg)
   const notes = notesFor(kbRoot, subtree, s, opts.kbPath)
@@ -291,7 +301,12 @@ export const baselineTree = async (
  * before parents. `dryRun` (default true at the tool boundary) reports what
  * would be archived without calling Notion or editing notes.
  */
-export const deleteTree = async (cfg: Config, subtree: string, s: MirrorSettings, opts: { kbPath?: string; dryRun: boolean }): Promise<TreeResult> => {
+export const deleteTree = async (
+  cfg: Config,
+  subtree: string,
+  s: MirrorSettings,
+  opts: { kbPath?: string; dryRun: boolean }
+): Promise<TreeResult> => {
   const kbRoot = requireRoot(cfg)
   const notes = [...notesFor(kbRoot, subtree, s, opts.kbPath)].reverse()
   const outcomes: NoteOutcome[] = []
@@ -309,7 +324,13 @@ export const deleteTree = async (cfg: Config, subtree: string, s: MirrorSettings
 }
 
 /** Touch then update one note's ancestor chain in a subtree (single-note convenience for the CLI). */
-export const publishTreeNote = async (cfg: Config, subtree: string, parent: NotionParent, s: MirrorSettings, kbPath: string): Promise<TreeOneResult> => {
+export const publishTreeNote = async (
+  cfg: Config,
+  subtree: string,
+  parent: NotionParent,
+  s: MirrorSettings,
+  kbPath: string
+): Promise<TreeOneResult> => {
   const touched = await touchTree(cfg, subtree, parent, s, kbPath)
   const updated = await updateTree(cfg, subtree, parent, s, { kbPath })
   return { chain: touched.outcomes.map((o) => o.kbPath), outcomes: [...touched.outcomes, ...updated.outcomes] }

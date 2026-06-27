@@ -32,7 +32,8 @@ const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200 }
 const fail = (status: number) => new Response(JSON.stringify({ code: 'x', message: 'boom' }), { status })
 const emptyChildren = () => ok({ results: [], has_more: false, next_cursor: null })
 
-const FM = (extra = ''): string => `---\nstatus: current\nnotion_source_url: https://www.notion.so/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nnotion_path: A / B${extra}\n---\n# My Note\n\nBody paragraph.\n`
+const FM = (extra = ''): string =>
+  `---\nstatus: current\nnotion_source_url: https://www.notion.so/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nnotion_path: A / B${extra}\n---\n# My Note\n\nBody paragraph.\n`
 
 describe('note verbs', () => {
   let kbRoot: string
@@ -112,7 +113,9 @@ describe('note verbs', () => {
     it('under a page parent uses the reserved title, makes no GET database call, and refreshes the footer', async () => {
       const abs = await writeNote('My Note.md', FM())
       fetchMock.mockResolvedValueOnce(ok(PAGE_RESPONSE)) // POST
-      fetchMock.mockResolvedValueOnce(ok({ results: [{ id: PAGE_HEX, type: 'child_page', child_page: { title: 'My Note' } }], has_more: false, next_cursor: null })) // footer GET
+      fetchMock.mockResolvedValueOnce(
+        ok({ results: [{ id: PAGE_HEX, type: 'child_page', child_page: { title: 'My Note' } }], has_more: false, next_cursor: null })
+      ) // footer GET
       fetchMock.mockResolvedValueOnce(ok({})) // footer PATCH append
       await touchNote(cfg, abs, { type: 'page_id', page_id: PAGE_HEX })
       const body = JSON.parse(fetchMock.mock.calls[0]?.[1].body)
@@ -159,7 +162,10 @@ describe('note verbs', () => {
     const CHILD = 'e'.repeat(32)
 
     it('updates the page in place: PATCHes the page, replaces the body, spares child pages, keeps the URL', async () => {
-      const abs = await writeNote('My Note.md', FM(`\nkb_notion_mirror_url: ${MIRROR_URL}\nkb_notion_mirror_published_at: 2020-01-01T00:00:00Z`))
+      const abs = await writeNote(
+        'My Note.md',
+        FM(`\nkb_notion_mirror_url: ${MIRROR_URL}\nkb_notion_mirror_published_at: 2020-01-01T00:00:00Z`)
+      )
       routeUpdate([
         { id: OLD_BODY, type: 'paragraph' },
         { id: CHILD, type: 'child_page', child_page: { title: 'C' } }
@@ -183,20 +189,33 @@ describe('note verbs', () => {
       await updateNote(cfg, abs, { type: 'page_id', page_id: OLD_PARENT }, { icon: { type: 'emoji', emoji: '📗' } })
       const pagePatch = fetchMock.mock.calls.find((c) => /\/v1\/pages\/[a-f0-9]+$/.test(String(c[0])) && c[1].method === 'PATCH')
       expect(JSON.parse(pagePatch?.[1].body).icon).toEqual({ type: 'emoji', emoji: '📗' })
-      expect(fetchMock.mock.calls.some((c) => String(c[0]) === `https://api.notion.test/v1/blocks/${OLD_PARENT}/children?page_size=100`)).toBe(true)
+      expect(
+        fetchMock.mock.calls.some((c) => String(c[0]) === `https://api.notion.test/v1/blocks/${OLD_PARENT}/children?page_size=100`)
+      ).toBe(true)
     })
 
     it('resolves wikilinks via link_map (mention) and italicises the unresolved ones', async () => {
       const linkedHex = 'c'.repeat(32)
-      const abs = await writeNote('My Note.md', `---\nstatus: x\nnotion_path: A\nkb_notion_mirror_url: ${MIRROR_URL}\n---\nSee [[Other]] and [[Gone]].\n`)
+      const abs = await writeNote(
+        'My Note.md',
+        `---\nstatus: x\nnotion_path: A\nkb_notion_mirror_url: ${MIRROR_URL}\n---\nSee [[Other]] and [[Gone]].\n`
+      )
       routeUpdate([{ id: OLD_BODY, type: 'paragraph' }], { type: 'page_id', page_id: PAGE_HEX })
       await updateNote(cfg, abs, { type: 'page_id', page_id: PAGE_HEX }, { linkMap: { Other: `https://www.notion.so/Other-${linkedHex}` } })
-      const appendCall = fetchMock.mock.calls.find((c) => String(c[0]).includes(`/v1/blocks/${PAGE_HEX}/children`) && c[1]?.method === 'PATCH')
+      const appendCall = fetchMock.mock.calls.find(
+        (c) => String(c[0]).includes(`/v1/blocks/${PAGE_HEX}/children`) && c[1]?.method === 'PATCH'
+      )
       const appended = JSON.parse(appendCall?.[1].body).children as Array<Record<string, unknown>>
       const para = appended.find((b) => b.type === 'paragraph') as { paragraph: { rich_text: Array<Record<string, unknown>> } }
       const rich = para.paragraph.rich_text
       expect(rich.some((r) => r.type === 'mention' && (r.mention as { page: { id: string } }).page.id === linkedHex)).toBe(true)
-      expect(rich.some((r) => (r as { annotations?: { italic?: boolean } }).annotations?.italic && (r as { text?: { content?: string } }).text?.content === 'Gone')).toBe(true)
+      expect(
+        rich.some(
+          (r) =>
+            (r as { annotations?: { italic?: boolean } }).annotations?.italic &&
+            (r as { text?: { content?: string } }).text?.content === 'Gone'
+        )
+      ).toBe(true)
     })
 
     it('detects the page-id ↔ database-id silent-failure case and throws', async () => {
@@ -218,15 +237,20 @@ describe('note verbs', () => {
         if (url.includes('/v1/databases/')) return ok(DB_RESPONSE)
         if (/\/v1\/pages\/[a-f0-9]+$/.test(url) && method === 'PATCH') return ok({ ...PAGE_RESPONSE, parent: newDbParent })
         if (/\/v1\/pages\/[a-f0-9]+$/.test(url) && method === 'GET') {
-          const getCalls = fetchMock.mock.calls.filter((c) => /\/v1\/pages\/[a-f0-9]+$/.test(String(c[0])) && (c[1]?.method ?? 'GET') === 'GET').length
+          const getCalls = fetchMock.mock.calls.filter(
+            (c) => /\/v1\/pages\/[a-f0-9]+$/.test(String(c[0])) && (c[1]?.method ?? 'GET') === 'GET'
+          ).length
           return ok({ ...PAGE_RESPONSE, parent: getCalls <= 1 ? oldPageParent : newDbParent })
         }
-        if (url.includes('/children') && method === 'GET') return ok({ results: [{ id: OLD_BODY, type: 'paragraph' }], has_more: false, next_cursor: null })
+        if (url.includes('/children') && method === 'GET')
+          return ok({ results: [{ id: OLD_BODY, type: 'paragraph' }], has_more: false, next_cursor: null })
         return ok({ results: [{ id: 'x' }] })
       })
       const result = await updateNote(cfg, abs, newDbParent)
       expect(result).toMatchObject({ url: MIRROR_URL })
-      expect(fetchMock.mock.calls.some((c) => String(c[0]) === `https://api.notion.test/v1/blocks/${OLD_PARENT}/children?page_size=100`)).toBe(true)
+      expect(
+        fetchMock.mock.calls.some((c) => String(c[0]) === `https://api.notion.test/v1/blocks/${OLD_PARENT}/children?page_size=100`)
+      ).toBe(true)
     })
 
     it('throws when the note is not mirrored yet (touch first)', async () => {
@@ -245,7 +269,9 @@ describe('note verbs', () => {
       const abs = await writeNote('My Note.md', FM(`\nkb_notion_mirror_url: ${MIRROR_URL}`))
       routeUpdate([{ id: OLD_BODY, type: 'paragraph' }], { type: 'page_id', page_id: PAGE_HEX })
       await updateNote({ ...cfg, bannerTemplate: '' }, abs, { type: 'page_id', page_id: PAGE_HEX })
-      const appendCall = fetchMock.mock.calls.find((c) => String(c[0]).includes(`/v1/blocks/${PAGE_HEX}/children`) && c[1]?.method === 'PATCH')
+      const appendCall = fetchMock.mock.calls.find(
+        (c) => String(c[0]).includes(`/v1/blocks/${PAGE_HEX}/children`) && c[1]?.method === 'PATCH'
+      )
       const appended = JSON.parse(appendCall?.[1].body).children as Array<{ type: string }>
       expect(appended.every((b) => b.type !== 'callout')).toBe(true)
     })
@@ -311,7 +337,9 @@ describe('note verbs', () => {
 
     it('throws when the note has no frontmatter', async () => {
       const abs = await writeNote('note.md', '# x\n\nbody\n')
-      await expect(baselineNote(cfg, abs, { type: 'database_id', database_id: DB_ID }, { publishedAt: 'x' })).rejects.toThrow(/no YAML frontmatter/)
+      await expect(baselineNote(cfg, abs, { type: 'database_id', database_id: DB_ID }, { publishedAt: 'x' })).rejects.toThrow(
+        /no YAML frontmatter/
+      )
     })
   })
 
@@ -331,7 +359,10 @@ describe('note verbs', () => {
     })
 
     it('archives the page and clears the mirror fields (database parent → no footer)', async () => {
-      const abs = await writeNote('note.md', FM(`\nkb_notion_mirror_url: ${MIRROR_URL}\nkb_notion_mirror_published_at: 2026-05-30T01:13:00Z`))
+      const abs = await writeNote(
+        'note.md',
+        FM(`\nkb_notion_mirror_url: ${MIRROR_URL}\nkb_notion_mirror_published_at: 2026-05-30T01:13:00Z`)
+      )
       fetchMock.mockResolvedValueOnce(ok({ ...PAGE_RESPONSE, parent: { type: 'database_id', database_id: DB_ID } })) // GET page
       fetchMock.mockResolvedValueOnce(ok({})) // archive
       const result = await deleteNote(cfg, abs, false)
@@ -348,7 +379,9 @@ describe('note verbs', () => {
       fetchMock.mockResolvedValueOnce(ok({})) // archive
       fetchMock.mockResolvedValueOnce(emptyChildren()) // footer refresh GET
       await deleteNote(cfg, abs, false)
-      expect(fetchMock.mock.calls.some((c) => String(c[0]) === `https://api.notion.test/v1/blocks/${OLD_PARENT}/children?page_size=100`)).toBe(true)
+      expect(
+        fetchMock.mock.calls.some((c) => String(c[0]) === `https://api.notion.test/v1/blocks/${OLD_PARENT}/children?page_size=100`)
+      ).toBe(true)
     })
 
     it('returns not-mirrored when the note has no mirror url', async () => {
@@ -372,7 +405,12 @@ describe('note verbs', () => {
       fetchMock.mockResolvedValueOnce(emptyChildren()) // footer (old parent)
       fetchMock.mockResolvedValueOnce(emptyChildren()) // footer (new parent)
       const result = await moveNote(cfg, abs, { type: 'page_id', page_id: PAGE_HEX })
-      expect(result).toEqual({ moved: true, page_id: PAGE_HEX, previous_parent: { type: 'page_id', page_id: OLD_PARENT }, new_parent: { type: 'page_id', page_id: PAGE_HEX } })
+      expect(result).toEqual({
+        moved: true,
+        page_id: PAGE_HEX,
+        previous_parent: { type: 'page_id', page_id: OLD_PARENT },
+        new_parent: { type: 'page_id', page_id: PAGE_HEX }
+      })
       const footerGets = fetchMock.mock.calls.filter((c) => String(c[0]).includes('/children')).map((c) => String(c[0]))
       expect(footerGets.some((u) => u.includes(OLD_PARENT))).toBe(true)
       expect(footerGets.some((u) => u.includes(PAGE_HEX))).toBe(true)
@@ -454,7 +492,10 @@ describe('note verbs', () => {
 
   describe('statusNote', () => {
     it('reports a mirrored note with its url and published_at', async () => {
-      const abs = await writeNote('note.md', FM(`\nkb_notion_mirror_url: ${MIRROR_URL}\nkb_notion_mirror_published_at: 2026-05-30T01:13:00Z`))
+      const abs = await writeNote(
+        'note.md',
+        FM(`\nkb_notion_mirror_url: ${MIRROR_URL}\nkb_notion_mirror_published_at: 2026-05-30T01:13:00Z`)
+      )
       expect(await statusNote(cfg, abs)).toEqual({ published: true, url: MIRROR_URL, published_at: '2026-05-30T01:13:00Z' })
       expect(fetchMock).not.toHaveBeenCalled()
     })

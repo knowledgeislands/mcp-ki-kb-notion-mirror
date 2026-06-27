@@ -154,7 +154,9 @@ describe('tree verbs', () => {
 
   describe('touchTree', () => {
     it('throws when kbRoot is unset', async () => {
-      await expect(touchTree({ ...cfg, kbRoot: undefined }, SUBTREE, ROOT_PARENT, s)).rejects.toThrow(/MCP_KB_NOTION_MIRROR_KB_ROOT must be set/)
+      await expect(touchTree({ ...cfg, kbRoot: undefined }, SUBTREE, ROOT_PARENT, s)).rejects.toThrow(
+        /MCP_KB_NOTION_MIRROR_KB_ROOT must be set/
+      )
     })
 
     it('scaffolds every note and writes URLs back', async () => {
@@ -284,7 +286,9 @@ describe('tree verbs', () => {
       // live last_edited == stored published_at → not drifted → hash skip
       expect(res.outcomes.map((o) => o.action)).toEqual(['skip'])
       // but the drift READ did happen
-      expect(fetchMock.mock.calls.some((c) => /\/v1\/pages\/[a-f0-9]{32}$/.test(String(c[0])) && (c[1]?.method ?? 'GET') === 'GET')).toBe(true)
+      expect(fetchMock.mock.calls.some((c) => /\/v1\/pages\/[a-f0-9]{32}$/.test(String(c[0])) && (c[1]?.method ?? 'GET') === 'GET')).toBe(
+        true
+      )
     })
 
     it('verify force re-pushes a page Notion edited after the last mirror (drift)', async () => {
@@ -297,7 +301,8 @@ describe('tree verbs', () => {
         const method = init?.method ?? 'GET'
         if (url.includes('/v1/databases/')) return ok(DB_RESPONSE)
         const m = url.match(/\/v1\/pages\/([a-f0-9]{32})$/)
-        if (m && (method === 'GET' || method === 'PATCH')) return ok({ ...pageResponse(m[1] as string), last_edited_time: '2026-05-30T05:00:00.000Z', parent: ROOT_PARENT })
+        if (m && (method === 'GET' || method === 'PATCH'))
+          return ok({ ...pageResponse(m[1] as string), last_edited_time: '2026-05-30T05:00:00.000Z', parent: ROOT_PARENT })
         if (url.includes('/children') && method === 'GET') return ok({ results: [], has_more: false, next_cursor: null })
         return ok({ results: [{ id: 'x' }] })
       })
@@ -336,7 +341,10 @@ describe('tree verbs', () => {
     it('leaves a skip-listed note unstamped', async () => {
       await write('Alpha/Alpha.md', fm({ kb_notion_mirror_url: `https://www.notion.so/A-${HEX_A}` }))
       const before = await read('Alpha/Alpha.md')
-      const res = await baselineTree(cfg, SUBTREE, ROOT_PARENT, s, { publishedAt: '2026-06-01T18:00:00Z', skip: new Set(['Alpha/Alpha.md']) })
+      const res = await baselineTree(cfg, SUBTREE, ROOT_PARENT, s, {
+        publishedAt: '2026-06-01T18:00:00Z',
+        skip: new Set(['Alpha/Alpha.md'])
+      })
       expect(res.outcomes[0]).toMatchObject({ action: 'skip', error: 'excluded from baseline' })
       expect(await read('Alpha/Alpha.md')).toBe(before)
       expect(fetchMock).not.toHaveBeenCalled()

@@ -50,7 +50,10 @@ describe('markdown helpers', () => {
       (block[type]?.rich_text ?? []).map((r) => r.text?.content ?? '').join('')
 
     it('folds a hard-wrapped paragraph back into one line', () => {
-      const blocks = bodyToBlocks('This paragraph was hard wrapped\nacross three\nsource lines.') as Array<{ type: string; [k: string]: unknown }>
+      const blocks = bodyToBlocks('This paragraph was hard wrapped\nacross three\nsource lines.') as Array<{
+        type: string
+        [k: string]: unknown
+      }>
       const para = blocks.find((b) => b.type === 'paragraph') as never
       expect(contentOf(para, 'paragraph')).toBe('This paragraph was hard wrapped across three source lines.')
     })
@@ -71,8 +74,11 @@ describe('markdown helpers', () => {
     it('walks table-row cells, folding soft breaks within each cell', () => {
       type Cell = Array<{ text?: { content?: string } }>
       type TableRow = { type: string; table_row?: { cells?: Cell[] } }
-      const table = bodyToBlocks('| Col A | Col B |\n| --- | --- |\n| one | two |\n').find((b): b is { type: string; table: { children: TableRow[] } } => (b as { type?: string }).type === 'table')
-      const cellText = (rows: TableRow[] | undefined): string[][] => (rows ?? []).map((r) => (r.table_row?.cells ?? []).map((cell) => cell.map((run) => run.text?.content ?? '').join('')))
+      const table = bodyToBlocks('| Col A | Col B |\n| --- | --- |\n| one | two |\n').find(
+        (b): b is { type: string; table: { children: TableRow[] } } => (b as { type?: string }).type === 'table'
+      )
+      const cellText = (rows: TableRow[] | undefined): string[][] =>
+        (rows ?? []).map((r) => (r.table_row?.cells ?? []).map((cell) => cell.map((run) => run.text?.content ?? '').join('')))
       // The `cells` branch of collapseSoftBreaks ran on every row (header + body),
       // leaving cell content intact.
       expect(cellText(table?.table.children)).toEqual([

@@ -76,10 +76,15 @@ describe('convertMentionPlaceholders', () => {
       {
         object: 'block',
         type: 'bulleted_list_item',
-        bulleted_list_item: { rich_text: [{ type: 'text', text: { content: 'x' } }], children: [para([{ type: 'text', text: { content: 'D', link: { url: `mention:${HEX}` } } }])] }
+        bulleted_list_item: {
+          rich_text: [{ type: 'text', text: { content: 'x' } }],
+          children: [para([{ type: 'text', text: { content: 'D', link: { url: `mention:${HEX}` } } }])]
+        }
       }
     ]
-    const out = convertMentionPlaceholders(nested) as Array<{ bulleted_list_item: { children: Array<{ paragraph: { rich_text: Array<{ type: string }> } }> } }>
+    const out = convertMentionPlaceholders(nested) as Array<{
+      bulleted_list_item: { children: Array<{ paragraph: { rich_text: Array<{ type: string }> } }> }
+    }>
     expect(out[0].bulleted_list_item.children[0].paragraph.rich_text[0].type).toBe('mention')
   })
 
@@ -88,11 +93,18 @@ describe('convertMentionPlaceholders', () => {
       object: 'block',
       type: 'table_row',
       table_row: {
-        cells: [[{ type: 'text', text: { content: 'Auth' } }], [{ type: 'text', text: { content: 'ADR-AUTH', link: { url: `mention:${HEX}` } } }]]
+        cells: [
+          [{ type: 'text', text: { content: 'Auth' } }],
+          [{ type: 'text', text: { content: 'ADR-AUTH', link: { url: `mention:${HEX}` } } }]
+        ]
       }
     }
     const out = convertMentionPlaceholders([row]) as Array<{ table_row: { cells: Array<Array<Record<string, unknown>>> } }>
     expect(out[0].table_row.cells[0]?.[0]).toEqual({ type: 'text', text: { content: 'Auth' } })
-    expect(out[0].table_row.cells[1]?.[0]).toEqual({ type: 'mention', mention: { type: 'page', page: { id: HEX } }, plain_text: 'ADR-AUTH' })
+    expect(out[0].table_row.cells[1]?.[0]).toEqual({
+      type: 'mention',
+      mention: { type: 'page', page: { id: HEX } },
+      plain_text: 'ADR-AUTH'
+    })
   })
 })

@@ -13,7 +13,8 @@ const content = (id: string) => ({ id, type: 'paragraph', paragraph: { rich_text
 const childPage = (id: string) => ({ id, type: 'child_page', child_page: { title: 'X' } })
 const heading = (id: string, text: string) => ({ id, type: 'heading_2', heading_2: { rich_text: [{ plain_text: text }] } })
 
-const childrenPage = (results: unknown[], next: string | null = null) => new Response(JSON.stringify({ results, has_more: next !== null, next_cursor: next }), { status: 200 })
+const childrenPage = (results: unknown[], next: string | null = null) =>
+  new Response(JSON.stringify({ results, has_more: next !== null, next_cursor: next }), { status: 200 })
 const ok = (body: unknown = {}) => new Response(JSON.stringify(body), { status: 200 })
 
 interface Call {
@@ -41,8 +42,12 @@ describe('footer', () => {
       expect(SENTINEL_TEXT).toBe('Child Pages')
       const blocks = buildFooterBlocks()
       expect(blocks).toHaveLength(1)
-      expect((blocks[0] as unknown as { type: string; heading_2: { rich_text: Array<{ text: { content: string } }> } }).type).toBe('heading_2')
-      expect((blocks[0] as unknown as { heading_2: { rich_text: Array<{ text: { content: string } }> } }).heading_2.rich_text[0].text.content).toBe('Child Pages')
+      expect((blocks[0] as unknown as { type: string; heading_2: { rich_text: Array<{ text: { content: string } }> } }).type).toBe(
+        'heading_2'
+      )
+      expect(
+        (blocks[0] as unknown as { heading_2: { rich_text: Array<{ text: { content: string } }> } }).heading_2.rich_text[0].text.content
+      ).toBe('Child Pages')
     })
   })
 

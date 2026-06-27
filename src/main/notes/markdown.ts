@@ -78,4 +78,5 @@ export const collapseSoftBreaks = (node: unknown): unknown => {
  * rich-text/character limits never produce an API-rejecting payload, then soft
  * line breaks from the KB's hard-wrapped prose are folded back into spaces.
  */
-export const bodyToBlocks = (markdownBody: string): unknown[] => collapseSoftBreaks(markdownToBlocks(markdownBody, { notionLimits: { truncate: true } })) as unknown[]
+export const bodyToBlocks = (markdownBody: string): unknown[] =>
+  collapseSoftBreaks(markdownToBlocks(markdownBody, { notionLimits: { truncate: true } })) as unknown[]

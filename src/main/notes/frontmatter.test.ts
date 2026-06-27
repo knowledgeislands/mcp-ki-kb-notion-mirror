@@ -68,8 +68,14 @@ Body paragraph.
   })
 
   it('replaces existing fields in place without reordering (re-publish)', () => {
-    const once = upsertFrontmatterFields(NOTE, { kb_notion_mirror_url: 'https://www.notion.so/v1-cccccccccccccccccccccccccccccccc', kb_notion_mirror_published_at: '2026-05-30T01:13:00Z' })
-    const twice = upsertFrontmatterFields(once, { kb_notion_mirror_url: 'https://www.notion.so/v2-dddddddddddddddddddddddddddddddd', kb_notion_mirror_published_at: '2026-06-01T09:00:00Z' })
+    const once = upsertFrontmatterFields(NOTE, {
+      kb_notion_mirror_url: 'https://www.notion.so/v1-cccccccccccccccccccccccccccccccc',
+      kb_notion_mirror_published_at: '2026-05-30T01:13:00Z'
+    })
+    const twice = upsertFrontmatterFields(once, {
+      kb_notion_mirror_url: 'https://www.notion.so/v2-dddddddddddddddddddddddddddddddd',
+      kb_notion_mirror_published_at: '2026-06-01T09:00:00Z'
+    })
     expect(twice).toContain('kb_notion_mirror_url: https://www.notion.so/v2-dddddddddddddddddddddddddddddddd')
     expect(twice).toContain('kb_notion_mirror_published_at: 2026-06-01T09:00:00Z')
     expect(twice).not.toContain('v1-')
@@ -88,7 +94,9 @@ body
 `
     const out = upsertFrontmatterFields(text, { kb_notion_mirror_url: 'u' })
     const lines = out.split('\n')
-    expect(lines[lines.indexOf('notion_source_url_secondary: https://www.notion.so/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb') + 1]).toBe('kb_notion_mirror_url: u')
+    expect(lines[lines.indexOf('notion_source_url_secondary: https://www.notion.so/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb') + 1]).toBe(
+      'kb_notion_mirror_url: u'
+    )
   })
 
   it('falls back to notion_source_url as the insert anchor', () => {
@@ -101,7 +109,9 @@ body
 `
     const out = upsertFrontmatterFields(text, { kb_notion_mirror_url: 'u' })
     const lines = out.split('\n')
-    expect(lines[lines.indexOf('notion_source_url: https://www.notion.so/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa') + 1]).toBe('kb_notion_mirror_url: u')
+    expect(lines[lines.indexOf('notion_source_url: https://www.notion.so/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa') + 1]).toBe(
+      'kb_notion_mirror_url: u'
+    )
   })
 
   it('appends at the end when no anchor field is present', () => {

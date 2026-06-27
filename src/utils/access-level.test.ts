@@ -16,9 +16,21 @@ const makeStub = () => {
 const gateAt = (accessLevel: AccessLevel) => {
   const { calls, stub } = makeStub()
   const gated = makeAccessGatedRegister(stub as unknown as Parameters<typeof makeAccessGatedRegister>[0], accessLevel, AUDIT_OFF)
-  gated('kb_notion_mirror_note_get', { title: 't', description: 'd', annotations: READ_ONLY_REMOTE } as never, (async () => ({ content: [] })) as never)
-  gated('kb_notion_mirror_note_touch', { title: 't', description: 'd', annotations: WRITE_REMOTE } as never, (async () => ({ content: [] })) as never)
-  gated('kb_notion_mirror_note_delete', { title: 't', description: 'd', annotations: DESTRUCTIVE_REMOTE } as never, (async () => ({ content: [] })) as never)
+  gated(
+    'kb_notion_mirror_note_get',
+    { title: 't', description: 'd', annotations: READ_ONLY_REMOTE } as never,
+    (async () => ({ content: [] })) as never
+  )
+  gated(
+    'kb_notion_mirror_note_touch',
+    { title: 't', description: 'd', annotations: WRITE_REMOTE } as never,
+    (async () => ({ content: [] })) as never
+  )
+  gated(
+    'kb_notion_mirror_note_delete',
+    { title: 't', description: 'd', annotations: DESTRUCTIVE_REMOTE } as never,
+    (async () => ({ content: [] })) as never
+  )
   return calls
 }
 

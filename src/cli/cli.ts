@@ -20,7 +20,7 @@
  */
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { loadConfig } from '../config/index.js'
+import { loadConfig, loadKbRoot } from '../config/index.js'
 import type { NotionParent } from '../main/notion-client/index.js'
 import {
   baselineTree,
@@ -101,7 +101,7 @@ const parentFromFlags = (argv: string[]): NotionParent => {
 }
 
 const requireKbRoot = (): string => {
-  const kbRoot = process.env.MCP_KB_NOTION_MIRROR_KB_ROOT
+  const kbRoot = loadKbRoot(process.env)
   if (!kbRoot) {
     console.error('MCP_KB_NOTION_MIRROR_KB_ROOT is required.')
     process.exit(1)
@@ -185,13 +185,29 @@ const runTree = async (verb: string, subtree: string, argv: string[], dryRun: bo
     case 'touch':
       return printOutcomes((await touchTree(cfg, subtree, parentFromFlags(argv), s, note)).outcomes)
     case 'update':
-      return printOutcomes((await updateTree(cfg, subtree, parentFromFlags(argv), s, { kbPath: note, force: argv.includes('--force'), verify: argv.includes('--verify') })).outcomes)
+      return printOutcomes(
+        (
+          await updateTree(cfg, subtree, parentFromFlags(argv), s, {
+            kbPath: note,
+            force: argv.includes('--force'),
+            verify: argv.includes('--verify')
+          })
+        ).outcomes
+      )
     case 'delete':
       return printOutcomes((await deleteTree(cfg, subtree, s, { kbPath: note, dryRun })).outcomes)
     case 'prune':
       return printOutcomes((await pruneTree(cfg, subtree, s, { dryRun })).outcomes)
     case 'baseline':
-      return printOutcomes((await baselineTree(cfg, subtree, parentFromFlags(argv), s, { kbPath: note, publishedAt: nowStamp(), skip: new Set(flagValues(argv, '--skip')) })).outcomes)
+      return printOutcomes(
+        (
+          await baselineTree(cfg, subtree, parentFromFlags(argv), s, {
+            kbPath: note,
+            publishedAt: nowStamp(),
+            skip: new Set(flagValues(argv, '--skip'))
+          })
+        ).outcomes
+      )
     default:
       console.error(`Unknown tree verb: ${verb}\n\n${USAGE}`)
       process.exit(2)
@@ -214,7 +230,8 @@ const runRoots = async (verb: string, argv: string[], dryRun: boolean): Promise<
     console.log('No mirror roots declared (kb_notion_mirror_root).')
     return
   }
-  const globalLinkMap = (): Record<string, string> => buildLinkMap(roots.flatMap((r) => publishOrder(kbRoot, r.subtree, s, discover(kbRoot, r.subtree, s))))
+  const globalLinkMap = (): Record<string, string> =>
+    buildLinkMap(roots.flatMap((r) => publishOrder(kbRoot, r.subtree, s, discover(kbRoot, r.subtree, s))))
   // One root's own notes — overlaid on the global map so a bare [[Name]] that
   // collides across roots resolves to THIS root's note, not whichever root sorts
   // last in the global map. Mirrors the MCP tree-update default.
@@ -230,7 +247,12 @@ const runRoots = async (verb: string, argv: string[], dryRun: boolean): Promise<
     for (const r of roots) {
       console.log(`\n########## update ${r.subtree} ##########`)
       const linkMap = { ...global, ...localLinkMap(r.subtree) }
-      await updateTree(cfg, r.subtree, r.parent, s, { linkMap, force: argv.includes('--force'), verify: argv.includes('--verify'), onProgress: liveProgress() })
+      await updateTree(cfg, r.subtree, r.parent, s, {
+        linkMap,
+        force: argv.includes('--force'),
+        verify: argv.includes('--verify'),
+        onProgress: liveProgress()
+      })
     }
   }
   if (verb === 'baseline') {

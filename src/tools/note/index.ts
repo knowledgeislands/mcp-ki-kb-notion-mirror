@@ -14,7 +14,9 @@ const kbPathArg = z
   .min(1)
   .max(4096)
   .refine(noParentSegment, 'kb_path must not contain ".." segments')
-  .describe('Path to the KB markdown note. Relative paths resolve against MCP_KB_NOTION_MIRROR_KB_ROOT; absolute paths must fall under it when set. ".." segments are rejected.')
+  .describe(
+    'Path to the KB markdown note. Relative paths resolve against MCP_KB_NOTION_MIRROR_KB_ROOT; absolute paths must fall under it when set. ".." segments are rejected.'
+  )
 
 const iconArg = z
   .discriminatedUnion('type', [
@@ -41,29 +43,50 @@ const deleteInput = z
     dry_run: z
       .boolean()
       .default(true)
-      .describe('When true (default) report what would be archived without calling Notion or editing the note. Set false to actually archive and clear the mirror frontmatter fields.')
+      .describe(
+        'When true (default) report what would be archived without calling Notion or editing the note. Set false to actually archive and clear the mirror frontmatter fields.'
+      )
   })
   .strict()
 
 const notionParent = z.record(z.string(), z.unknown())
 
 const getNoteOutput = z.union([
-  z.object({ id: z.string(), parent: notionParent, title: z.string().nullable(), created_time: z.string(), last_edited_time: z.string(), archived: z.boolean(), url: z.string() }),
+  z.object({
+    id: z.string(),
+    parent: notionParent,
+    title: z.string().nullable(),
+    created_time: z.string(),
+    last_edited_time: z.string(),
+    archived: z.boolean(),
+    url: z.string()
+  }),
   z.object({ exists: z.literal(false), reason: z.string() })
 ])
 
-const statusNoteOutput = z.union([z.object({ published: z.literal(true), url: z.string(), published_at: z.string() }), z.object({ published: z.literal(false) })])
+const statusNoteOutput = z.union([
+  z.object({ published: z.literal(true), url: z.string(), published_at: z.string() }),
+  z.object({ published: z.literal(false) })
+])
 
 const preflightNoteOutput = z.object({ ok: z.boolean(), issues: z.array(z.string()) })
 
-const touchNoteOutput = z.union([z.object({ url: z.string(), page_id: z.string(), published_at: z.string() }), z.object({ skipped: z.literal(true), existing_url: z.string() })])
+const touchNoteOutput = z.union([
+  z.object({ url: z.string(), page_id: z.string(), published_at: z.string() }),
+  z.object({ skipped: z.literal(true), existing_url: z.string() })
+])
 
 const updateNoteOutput = z.object({ url: z.string(), page_id: z.string(), updated_at: z.string() })
 
 const moveNoteOutput = z.object({ moved: z.literal(true), page_id: z.string(), previous_parent: notionParent, new_parent: notionParent })
 
 const deleteNoteOutput = z.union([
-  z.object({ dry_run: z.literal(true), would_archive_url: z.string(), would_archive_page_id: z.string(), would_clear_fields: z.array(z.string()) }),
+  z.object({
+    dry_run: z.literal(true),
+    would_archive_url: z.string(),
+    would_archive_page_id: z.string(),
+    would_clear_fields: z.array(z.string())
+  }),
   z.object({ archived: z.literal(true), page_id: z.string(), url: z.string() }),
   z.object({ archived: z.literal(false), reason: z.string() })
 ])
@@ -200,7 +223,9 @@ Errors:
     },
     async ({ kb_path, parent, icon, link_map }) => {
       try {
-        return jsonResult(await updateNote(cfg, kb_path, parent as NotionParent, { icon: icon as NotionIcon | undefined, linkMap: link_map }))
+        return jsonResult(
+          await updateNote(cfg, kb_path, parent as NotionParent, { icon: icon as NotionIcon | undefined, linkMap: link_map })
+        )
       } catch (err) {
         return errorResult('updating note', err)
       }

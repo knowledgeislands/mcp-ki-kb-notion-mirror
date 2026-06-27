@@ -11,7 +11,16 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { NotionParent } from '../notion-client/index.js'
-import { buildLinkMap, discover, iconFor, indexKbPathFor, MAX_WALK_DEPTH, publishOrder, readFrontmatter, resolveParent } from './discover.js'
+import {
+  buildLinkMap,
+  discover,
+  iconFor,
+  indexKbPathFor,
+  MAX_WALK_DEPTH,
+  publishOrder,
+  readFrontmatter,
+  resolveParent
+} from './discover.js'
 import type { MirrorSettings } from './settings.js'
 
 const PAGE_ID = '3709f7187cc281dd9a32c190c3eaf8b6'
@@ -273,7 +282,10 @@ describe('tree FS layer', () => {
 
   describe('iconFor', () => {
     it('builds an external Lucide icon URL from a kebab-case name', () => {
-      expect(iconFor('code-2', s)).toEqual({ type: 'external', external: { url: 'https://unpkg.com/lucide-static@latest/icons/code-2.svg' } })
+      expect(iconFor('code-2', s)).toEqual({
+        type: 'external',
+        external: { url: 'https://unpkg.com/lucide-static@latest/icons/code-2.svg' }
+      })
     })
     it('returns undefined when no icon name is set', () => {
       expect(iconFor(undefined, s)).toBeUndefined()
