@@ -1,7 +1,7 @@
-// Generated on 2026-07-12T09:32:23.435Z by @knowledgeislands/mcp-ki-kb-notion-mirror@1.0.0
+// Generated on 2026-07-12T10:44:03.371Z by @knowledgeislands/mcp-ki-kb-notion-mirror@1.0.0
 // Server: hnr-mcp-ki-kb-notion-mirror
 // Source: /Users/krisbrown/.mcporter/mcporter.json
-// Transport: STDIO /Users/krisbrown/.local/share/mise/installs/node/24.16.0/bin/node /Users/krisbrown/kis/knowledgeislands/mcp-ki-kb-notion-mirror/dist/mcp-server/index.js
+// Transport: STDIO /Users/krisbrown/.local/share/mise/installs/node/lts/bin/node /Users/krisbrown/kis/knowledgeislands/mcp-ki-kb-notion-mirror/dist/mcp-server/index.js
 
 import type { CallResult } from 'mcporter';
 
