@@ -27,7 +27,7 @@ import type { NoteOutcome, TreeResult } from './index.js'
 import type { MirrorSettings } from './settings.js'
 
 const requireRoot = (cfg: Config): string => {
-  if (!cfg.kbRoot) throw new Error('MCP_KB_NOTION_MIRROR_KB_ROOT must be set — prune needs the KB root.')
+  if (!cfg.kbRoot) throw new Error('MCP_KI_KB_NOTION_MIRROR_KB_ROOT must be set — prune needs the KB root.')
   return cfg.kbRoot
 }
 

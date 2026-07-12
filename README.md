@@ -1,4 +1,4 @@
-# mcp-kb-notion-mirror
+# mcp-ki-kb-notion-mirror
 
 Local stdio MCP server that **mirrors** Knowledge Base markdown notes into Notion and records the resulting Notion URL back into each note's YAML frontmatter.
 
@@ -132,29 +132,29 @@ Notion renders a parent's children inline as native `child_page` blocks. The foo
 
 ## Publish CLI
 
-The `mcp-kb-notion-mirror-publish` bin mirrors the tool surface as `<resource> <verb>` subcommands:
+The `mcp-ki-kb-notion-mirror-publish` bin mirrors the tool surface as `<resource> <verb>` subcommands:
 
 ```bash
-mcp-kb-notion-mirror-publish note status    Alpha/Alpha.md
-mcp-kb-notion-mirror-publish note touch      Alpha/Alpha.md --parent-db <wiki-db-id>
-mcp-kb-notion-mirror-publish note update     Alpha/Alpha.md --parent-db <wiki-db-id>
-mcp-kb-notion-mirror-publish note delete     Alpha/Alpha.md --dry-run
+mcp-ki-kb-notion-mirror-publish note status    Alpha/Alpha.md
+mcp-ki-kb-notion-mirror-publish note touch      Alpha/Alpha.md --parent-db <wiki-db-id>
+mcp-ki-kb-notion-mirror-publish note update     Alpha/Alpha.md --parent-db <wiki-db-id>
+mcp-ki-kb-notion-mirror-publish note delete     Alpha/Alpha.md --dry-run
 
-mcp-kb-notion-mirror-publish tree status     Alpha
-mcp-kb-notion-mirror-publish tree preflight  Alpha
-mcp-kb-notion-mirror-publish tree touch      Alpha --parent-page <page-id>
-mcp-kb-notion-mirror-publish tree update     Alpha --parent-page <page-id> --note Alpha/Beta/Gamma.md
+mcp-ki-kb-notion-mirror-publish tree status     Alpha
+mcp-ki-kb-notion-mirror-publish tree preflight  Alpha
+mcp-ki-kb-notion-mirror-publish tree touch      Alpha --parent-page <page-id>
+mcp-ki-kb-notion-mirror-publish tree update     Alpha --parent-page <page-id> --note Alpha/Beta/Gamma.md
 
-mcp-kb-notion-mirror-publish roots list                 # every declared root + its parent
-mcp-kb-notion-mirror-publish roots publish              # touch-all then update-all across roots
-mcp-kb-notion-mirror-publish roots publish --dry-run
+mcp-ki-kb-notion-mirror-publish roots list                 # every declared root + its parent
+mcp-ki-kb-notion-mirror-publish roots publish              # touch-all then update-all across roots
+mcp-ki-kb-notion-mirror-publish roots publish --dry-run
 ```
 
 `roots publish` is the only place the **cross-root multi-step** lives: it touches every declared root, then updates them all with one link map spanning every root so cross-root `[[wikilinks]]` resolve. It auto-loads `.env.local` and `.env` from the package root. Parents are per-invocation flags (or, for `roots`, read from `kb_notion_mirror_root` frontmatter) — never from env.
 
 ## Access levels
 
-Tools are gated by `MCP_KB_NOTION_MIRROR_ACCESS_LEVEL` (default `write`). Each level implies the lower ones:
+Tools are gated by `MCP_KI_KB_NOTION_MIRROR_ACCESS_LEVEL` (default `write`). Each level implies the lower ones:
 
 | Level         | Tools registered                                           |
 | ------------- | ---------------------------------------------------------- |
@@ -186,12 +186,12 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (or the
 ```json
 {
   "mcpServers": {
-    "mcp-kb-notion-mirror": {
+    "mcp-ki-kb-notion-mirror": {
       "command": "node",
-      "args": ["/absolute/path/to/mcp-kb-notion-mirror/dist/mcp-server/index.js"],
+      "args": ["/absolute/path/to/mcp-ki-kb-notion-mirror/dist/mcp-server/index.js"],
       "env": {
-        "MCP_KB_NOTION_MIRROR_TOKEN": "ntn_YOUR_INTEGRATION_SECRET",
-        "MCP_KB_NOTION_MIRROR_KB_ROOT": "/absolute/path/to/your/kb"
+        "MCP_KI_KB_NOTION_MIRROR_TOKEN": "ntn_YOUR_INTEGRATION_SECRET",
+        "MCP_KI_KB_NOTION_MIRROR_KB_ROOT": "/absolute/path/to/your/kb"
       }
     }
   }
@@ -204,20 +204,20 @@ Restart Claude.
 
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
-| `MCP_KB_NOTION_MIRROR_TOKEN` | yes | — | Notion internal-integration secret (`ntn_…`). |
-| `MCP_KB_NOTION_MIRROR_KB_ROOT` | no † | unset | Absolute KB root. `kb_path` / `subtree` resolve under it and are confined to it. |
-| `MCP_KB_NOTION_MIRROR_ACCESS_LEVEL` | no | `write` | `read` / `write` / `destructive`. |
-| `MCP_KB_NOTION_MIRROR_BANNER_TEMPLATE` | no | KB default | Banner copy. ‡ |
-| `MCP_KB_NOTION_MIRROR_API_BASE_URL` | no | `https://api.notion.com` | Notion API base URL. |
-| `MCP_KB_NOTION_MIRROR_SKIP_PREFIXES` | no | `+` | Comma-separated filename prefixes excluded from tree walking. |
-| `MCP_KB_NOTION_MIRROR_SKIP_PATHS` | no | (none) | Comma-separated kb-paths excluded from tree walking. |
-| `MCP_KB_NOTION_MIRROR_ICON_BASE_URL` | no | [Lucide static icons][lucide-icons] | Base URL for Lucide-style external page icons. |
-| `MCP_KB_NOTION_MIRROR_AUDIT_LOG` | no | `writes` | Audit-log scope. `off` / `writes` / `all`. |
-| `MCP_KB_NOTION_MIRROR_AUDIT_LOG_PATH` | no | `~/.local/state/mcp-kb-notion-mirror/audit.jsonl` | Path to the JSONL audit log. |
-| `MCP_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES` | no | `10485760` (10 MiB) | Size-based rotation threshold in bytes. `0` disables rotation. |
-| `MCP_KB_NOTION_MIRROR_AUDIT_LOG_KEEP` | no | `5` | Number of rotated audit-log files to retain. |
+| `MCP_KI_KB_NOTION_MIRROR_TOKEN` | yes | — | Notion internal-integration secret (`ntn_…`). |
+| `MCP_KI_KB_NOTION_MIRROR_KB_ROOT` | no † | unset | Absolute KB root. `kb_path` / `subtree` resolve under it and are confined to it. |
+| `MCP_KI_KB_NOTION_MIRROR_ACCESS_LEVEL` | no | `write` | `read` / `write` / `destructive`. |
+| `MCP_KI_KB_NOTION_MIRROR_BANNER_TEMPLATE` | no | KB default | Banner copy. ‡ |
+| `MCP_KI_KB_NOTION_MIRROR_API_BASE_URL` | no | `https://api.notion.com` | Notion API base URL. |
+| `MCP_KI_KB_NOTION_MIRROR_SKIP_PREFIXES` | no | `+` | Comma-separated filename prefixes excluded from tree walking. |
+| `MCP_KI_KB_NOTION_MIRROR_SKIP_PATHS` | no | (none) | Comma-separated kb-paths excluded from tree walking. |
+| `MCP_KI_KB_NOTION_MIRROR_ICON_BASE_URL` | no | [Lucide static icons][lucide-icons] | Base URL for Lucide-style external page icons. |
+| `MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG` | no | `writes` | Audit-log scope. `off` / `writes` / `all`. |
+| `MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_PATH` | no | `~/.local/state/mcp-ki-kb-notion-mirror/audit.jsonl` | Path to the JSONL audit log. |
+| `MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES` | no | `10485760` (10 MiB) | Size-based rotation threshold in bytes. `0` disables rotation. |
+| `MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_KEEP` | no | `5` | Number of rotated audit-log files to retain. |
 
-† The `tree` and `roots` tools require `MCP_KB_NOTION_MIRROR_KB_ROOT`; the `note` tools work with absolute `kb_path`s when it is unset.
+† The `tree` and `roots` tools require `MCP_KI_KB_NOTION_MIRROR_KB_ROOT`; the `note` tools work with absolute `kb_path`s when it is unset.
 
 ‡ Banner copy; `{date}` → today's UTC date; `**bold**` honoured. An empty string disables the banner.
 

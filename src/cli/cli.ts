@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * CLI entry: `mcp-kb-notion-mirror-publish <resource> <verb> [args] [flags]`.
+ * CLI entry: `mcp-ki-kb-notion-mirror-publish <resource> <verb> [args] [flags]`.
  *
  * Loads `.env.local` and `.env` from the package root before reading
  * process.env so the standard Node runtime gets the same auto-load behaviour
@@ -63,7 +63,7 @@ const tryLoadEnvFile = (file: string): void => {
 tryLoadEnvFile(path.join(PACKAGE_ROOT, '.env.local'))
 tryLoadEnvFile(path.join(PACKAGE_ROOT, '.env'))
 
-const USAGE = `Usage: mcp-kb-notion-mirror-publish <resource> <verb> [args] [flags]
+const USAGE = `Usage: mcp-ki-kb-notion-mirror-publish <resource> <verb> [args] [flags]
 
 note  <verb> <kbPath>   verbs: get | status | preflight | touch | update | move | delete
 tree  <verb> <subtree>  verbs: status | preflight | touch | update | delete | prune | baseline
@@ -79,11 +79,11 @@ Flags:
   --skip <kbPath>     baseline only: leave this note unstamped (repeatable)
 
 Env:
-  MCP_KB_NOTION_MIRROR_TOKEN          required for Notion calls — integration secret
-  MCP_KB_NOTION_MIRROR_KB_ROOT        required — absolute path to KB root
-  MCP_KB_NOTION_MIRROR_SKIP_PREFIXES  default "+"
-  MCP_KB_NOTION_MIRROR_SKIP_PATHS     default "" (none)
-  MCP_KB_NOTION_MIRROR_ICON_BASE_URL  default https://unpkg.com/lucide-static@latest/icons
+  MCP_KI_KB_NOTION_MIRROR_TOKEN          required for Notion calls — integration secret
+  MCP_KI_KB_NOTION_MIRROR_KB_ROOT        required — absolute path to KB root
+  MCP_KI_KB_NOTION_MIRROR_SKIP_PREFIXES  default "+"
+  MCP_KI_KB_NOTION_MIRROR_SKIP_PATHS     default "" (none)
+  MCP_KI_KB_NOTION_MIRROR_ICON_BASE_URL  default https://unpkg.com/lucide-static@latest/icons
 `
 
 const flagValue = (argv: string[], name: string): string | undefined => {
@@ -103,7 +103,7 @@ const parentFromFlags = (argv: string[]): NotionParent => {
 const requireKbRoot = (): string => {
   const kbRoot = loadKbRoot(process.env)
   if (!kbRoot) {
-    console.error('MCP_KB_NOTION_MIRROR_KB_ROOT is required.')
+    console.error('MCP_KI_KB_NOTION_MIRROR_KB_ROOT is required.')
     process.exit(1)
   }
   return kbRoot

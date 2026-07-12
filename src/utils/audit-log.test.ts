@@ -4,8 +4,8 @@ import * as path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AuditConfig } from './audit-log.js'
 
-describe('appendAuditEvent / withAuditLog (mcp-kb-notion-mirror)', () => {
-  const tmpDir = path.join(os.tmpdir(), 'mcp-kb-notion-mirror-audit-log-tests', `run-${process.pid}-${Date.now()}`)
+describe('appendAuditEvent / withAuditLog (mcp-ki-kb-notion-mirror)', () => {
+  const tmpDir = path.join(os.tmpdir(), 'mcp-ki-kb-notion-mirror-audit-log-tests', `run-${process.pid}-${Date.now()}`)
   const logPath = path.join(tmpDir, 'audit.jsonl')
 
   // The audit-log module keeps internal state (chmodEnsured, the append queue),
@@ -46,7 +46,7 @@ describe('appendAuditEvent / withAuditLog (mcp-kb-notion-mirror)', () => {
     await wrapped({ kb_path: 'x.md', mode: 'create' })
     await flushAsync()
     const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
-    expect(event.server).toBe('mcp-kb-notion-mirror')
+    expect(event.server).toBe('mcp-ki-kb-notion-mirror')
     expect(event.tool).toBe('kb_notion_mirror_note_touch')
     expect(event.level).toBe('write')
     expect(event.ok).toBe(true)

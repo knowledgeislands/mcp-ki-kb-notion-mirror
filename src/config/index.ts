@@ -51,7 +51,7 @@ export type AuditLogMode = 'off' | 'writes' | 'all'
 
 /**
  * The mirrored-from-KB banner. `{date}` interpolates today's UTC date; markdown
- * `**bold**` is honoured. Override with `MCP_KB_NOTION_MIRROR_BANNER_TEMPLATE`; an
+ * `**bold**` is honoured. Override with `MCP_KI_KB_NOTION_MIRROR_BANNER_TEMPLATE`; an
  * empty string disables the banner. The default omits a leading emoji because
  * the callout renders the 📘 icon (see src/main/mirror/banner.ts).
  */
@@ -99,14 +99,14 @@ const parseAccessLevel = (raw: string | undefined): AccessLevel => {
   const v = raw?.trim()
   if (v === undefined || v === '') return 'write'
   if ((ACCESS_LEVELS as readonly string[]).includes(v)) return v as AccessLevel
-  throw new Error(`Invalid MCP_KB_NOTION_MIRROR_ACCESS_LEVEL="${raw}". Allowed: ${ACCESS_LEVELS.join(', ')}`)
+  throw new Error(`Invalid MCP_KI_KB_NOTION_MIRROR_ACCESS_LEVEL="${raw}". Allowed: ${ACCESS_LEVELS.join(', ')}`)
 }
 
 const parseAuditLogMode = (raw: string | undefined): AuditLogMode => {
   const v = raw?.trim().toLowerCase()
   if (v === undefined || v === '') return 'writes'
   if (v === 'off' || v === 'writes' || v === 'all') return v
-  throw new Error(`Invalid MCP_KB_NOTION_MIRROR_AUDIT_LOG="${raw}" — expected one of: off, writes, all.`)
+  throw new Error(`Invalid MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG="${raw}" — expected one of: off, writes, all.`)
 }
 
 const parseNonNegativeInt = (raw: string | undefined, fallback: number, varName: string): number => {
@@ -133,9 +133,9 @@ const splitCsv = (raw: string | undefined, fallback: string[]): string[] => {
 /**
  * Build the mirror-walk settings slice from env. No required var — the subtree +
  * parent are passed per call, so a missing env just falls back to the defaults:
- *   MCP_KB_NOTION_MIRROR_SKIP_PREFIXES  default ["+"]
- *   MCP_KB_NOTION_MIRROR_SKIP_PATHS     default []
- *   MCP_KB_NOTION_MIRROR_ICON_BASE_URL  default the lucide-static CDN URL
+ *   MCP_KI_KB_NOTION_MIRROR_SKIP_PREFIXES  default ["+"]
+ *   MCP_KI_KB_NOTION_MIRROR_SKIP_PATHS     default []
+ *   MCP_KI_KB_NOTION_MIRROR_ICON_BASE_URL  default the lucide-static CDN URL
  *
  * `loadConfig` folds the result into `Config.mirror`; it is also exported so the
  * CLI's local-only verbs (tree status/preflight) can read just this slice
@@ -143,9 +143,9 @@ const splitCsv = (raw: string | undefined, fallback: string[]): string[] => {
  * still read only here, inside config/.
  */
 export const loadMirrorSettings = (env: NodeJS.ProcessEnv = process.env): MirrorSettings => ({
-  skipPrefixes: splitCsv(env.MCP_KB_NOTION_MIRROR_SKIP_PREFIXES, ['+']),
-  skipKbPaths: new Set(splitCsv(env.MCP_KB_NOTION_MIRROR_SKIP_PATHS, [])),
-  iconBaseUrl: (env.MCP_KB_NOTION_MIRROR_ICON_BASE_URL ?? 'https://unpkg.com/lucide-static@latest/icons').replace(/\/+$/, '')
+  skipPrefixes: splitCsv(env.MCP_KI_KB_NOTION_MIRROR_SKIP_PREFIXES, ['+']),
+  skipKbPaths: new Set(splitCsv(env.MCP_KI_KB_NOTION_MIRROR_SKIP_PATHS, [])),
+  iconBaseUrl: (env.MCP_KI_KB_NOTION_MIRROR_ICON_BASE_URL ?? 'https://unpkg.com/lucide-static@latest/icons').replace(/\/+$/, '')
 })
 
 /**
@@ -157,7 +157,7 @@ export const loadMirrorSettings = (env: NodeJS.ProcessEnv = process.env): Mirror
  * just this one var without requiring the Notion token that full `loadConfig`
  * demands — env is still read only here, inside config/.
  */
-export const loadKbRoot = (env: NodeJS.ProcessEnv = process.env): string | undefined => resolveKbRoot(env.MCP_KB_NOTION_MIRROR_KB_ROOT)
+export const loadKbRoot = (env: NodeJS.ProcessEnv = process.env): string | undefined => resolveKbRoot(env.MCP_KI_KB_NOTION_MIRROR_KB_ROOT)
 
 /**
  * Resolve + validate the Notion API base URL. SSRF discipline (standard §6 /
@@ -172,11 +172,11 @@ const parseNotionApiBaseUrl = (raw: string | undefined): string => {
   try {
     url = new URL(trimmed)
   } catch {
-    throw new Error(`Invalid MCP_KB_NOTION_MIRROR_API_BASE_URL="${raw}" — must be a valid absolute URL.`)
+    throw new Error(`Invalid MCP_KI_KB_NOTION_MIRROR_API_BASE_URL="${raw}" — must be a valid absolute URL.`)
   }
   if (url.protocol !== 'https:') {
     throw new Error(
-      `Invalid MCP_KB_NOTION_MIRROR_API_BASE_URL="${raw}" — must use https: (got "${url.protocol}"). The Notion token is sent as a Bearer header; plaintext is rejected.`
+      `Invalid MCP_KI_KB_NOTION_MIRROR_API_BASE_URL="${raw}" — must use https: (got "${url.protocol}"). The Notion token is sent as a Bearer header; plaintext is rejected.`
     )
   }
   return trimmed
@@ -193,27 +193,27 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): Config => {
   return {
     notionToken: requireEnv(
       env,
-      'MCP_KB_NOTION_MIRROR_TOKEN',
+      'MCP_KI_KB_NOTION_MIRROR_TOKEN',
       'Create a Notion internal integration, grant it Read + Insert + Update content, connect it to the target page/database, and copy its secret (ntn_…) here.'
     ),
-    notionApiBaseUrl: parseNotionApiBaseUrl(env.MCP_KB_NOTION_MIRROR_API_BASE_URL),
+    notionApiBaseUrl: parseNotionApiBaseUrl(env.MCP_KI_KB_NOTION_MIRROR_API_BASE_URL),
     // Notion versions the API via a header, not the URL. Bump when Notion ships a new stable date.
     notionApiVersion: '2022-06-28',
-    kbRoot: resolveKbRoot(env.MCP_KB_NOTION_MIRROR_KB_ROOT),
-    bannerTemplate: env.MCP_KB_NOTION_MIRROR_BANNER_TEMPLATE ?? DEFAULT_BANNER_TEMPLATE,
+    kbRoot: resolveKbRoot(env.MCP_KI_KB_NOTION_MIRROR_KB_ROOT),
+    bannerTemplate: env.MCP_KI_KB_NOTION_MIRROR_BANNER_TEMPLATE ?? DEFAULT_BANNER_TEMPLATE,
     mirror: loadMirrorSettings(env),
-    accessLevel: parseAccessLevel(env.MCP_KB_NOTION_MIRROR_ACCESS_LEVEL),
-    auditLogMode: parseAuditLogMode(env.MCP_KB_NOTION_MIRROR_AUDIT_LOG),
+    accessLevel: parseAccessLevel(env.MCP_KI_KB_NOTION_MIRROR_ACCESS_LEVEL),
+    auditLogMode: parseAuditLogMode(env.MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG),
     auditLogPath: path.resolve(
       expandHome(
-        env.MCP_KB_NOTION_MIRROR_AUDIT_LOG_PATH ?? path.join(os.homedir(), '.local', 'state', 'mcp-kb-notion-mirror', 'audit.jsonl')
+        env.MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_PATH ?? path.join(os.homedir(), '.local', 'state', 'mcp-ki-kb-notion-mirror', 'audit.jsonl')
       )
     ),
     auditLogMaxBytes: parseNonNegativeInt(
-      env.MCP_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES,
+      env.MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES,
       10 * 1024 * 1024,
-      'MCP_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES'
+      'MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES'
     ),
-    auditLogKeep: parseNonNegativeInt(env.MCP_KB_NOTION_MIRROR_AUDIT_LOG_KEEP, 5, 'MCP_KB_NOTION_MIRROR_AUDIT_LOG_KEEP')
+    auditLogKeep: parseNonNegativeInt(env.MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_KEEP, 5, 'MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_KEEP')
   }
 }

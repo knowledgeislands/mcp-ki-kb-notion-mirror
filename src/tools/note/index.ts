@@ -15,7 +15,7 @@ const kbPathArg = z
   .max(4096)
   .refine(noParentSegment, 'kb_path must not contain ".." segments')
   .describe(
-    'Path to the KB markdown note. Relative paths resolve against MCP_KB_NOTION_MIRROR_KB_ROOT; absolute paths must fall under it when set. ".." segments are rejected.'
+    'Path to the KB markdown note. Relative paths resolve against MCP_KI_KB_NOTION_MIRROR_KB_ROOT; absolute paths must fall under it when set. ".." segments are rejected.'
   )
 
 const iconArg = z

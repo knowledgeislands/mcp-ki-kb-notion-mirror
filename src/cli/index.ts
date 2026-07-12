@@ -5,7 +5,7 @@
  *   - roots       (main/roots)   — listRoots/discoverRoots
  * plus the walk settings and the discover/order/resolve primitives.
  *
- * The CLI in `./cli.ts` is consumed as the `mcp-kb-notion-mirror-publish` bin,
+ * The CLI in `./cli.ts` is consumed as the `mcp-ki-kb-notion-mirror-publish` bin,
  * not via this module.
  */
 

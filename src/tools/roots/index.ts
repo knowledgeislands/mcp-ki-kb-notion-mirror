@@ -34,7 +34,7 @@ Returns: [{ subtree, indexKbPath, parent }] sorted by subtree. A database parent
     },
     async () => {
       try {
-        if (!cfg.kbRoot) throw new Error('MCP_KB_NOTION_MIRROR_KB_ROOT must be set to list roots.')
+        if (!cfg.kbRoot) throw new Error('MCP_KI_KB_NOTION_MIRROR_KB_ROOT must be set to list roots.')
         return jsonResult(listRoots(cfg.kbRoot, settings))
       } catch (err) {
         return errorResult('listing roots', err)

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * mcp-kb-notion-mirror
+ * mcp-ki-kb-notion-mirror
  *
  * Local stdio MCP server that mirrors local Knowledge Base markdown notes to a
  * Notion wiki and records the resulting Notion page URL back into each note's
@@ -20,21 +20,21 @@
  *     the tree tools per root without rescanning the KB.
  *
  * Configuration (environment variables):
- *   MCP_KB_NOTION_MIRROR_TOKEN            Required. Notion internal-integration
+ *   MCP_KI_KB_NOTION_MIRROR_TOKEN            Required. Notion internal-integration
  *                                      secret (ntn_…). Needs Read + Insert +
  *                                      Update content and a Connection to every
  *                                      page/database it publishes into.
- *   MCP_KB_NOTION_MIRROR_KB_ROOT          Optional. Absolute KB root. When set,
+ *   MCP_KI_KB_NOTION_MIRROR_KB_ROOT          Optional. Absolute KB root. When set,
  *                                      kb_path args resolve under it and are
  *                                      confined to it; when unset, kb_path must
  *                                      be absolute (caller bounds traversal).
- *   MCP_KB_NOTION_MIRROR_ACCESS_LEVEL     Optional. read | write | destructive.
+ *   MCP_KI_KB_NOTION_MIRROR_ACCESS_LEVEL     Optional. read | write | destructive.
  *                                      Default: write.
- *   MCP_KB_NOTION_MIRROR_BANNER_TEMPLATE  Optional. Banner copy; {date} → today's
+ *   MCP_KI_KB_NOTION_MIRROR_BANNER_TEMPLATE  Optional. Banner copy; {date} → today's
  *                                      UTC date. Empty string disables the banner.
- *   MCP_KB_NOTION_MIRROR_AUDIT_LOG        Optional. off | writes | all. Default: writes.
- *   MCP_KB_NOTION_MIRROR_AUDIT_LOG_PATH   Optional. Default
- *                                      ~/.local/state/mcp-kb-notion-mirror/audit.jsonl.
+ *   MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG        Optional. off | writes | all. Default: writes.
+ *   MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_PATH   Optional. Default
+ *                                      ~/.local/state/mcp-ki-kb-notion-mirror/audit.jsonl.
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
@@ -48,16 +48,16 @@ import { makeAccessGatedRegister } from '../utils/access-level.js'
 const config = loadConfig()
 const settings = config.mirror
 
-console.error(`mcp-kb-notion-mirror starting...`)
-console.error(`  MCP_KB_NOTION_MIRROR_API_BASE_URL=${config.notionApiBaseUrl}`)
-console.error(`  MCP_KB_NOTION_MIRROR_KB_ROOT=${config.kbRoot ?? '(unset — kb_path must be absolute)'}`)
-console.error(`  MCP_KB_NOTION_MIRROR_ACCESS_LEVEL=${config.accessLevel}`)
+console.error(`mcp-ki-kb-notion-mirror starting...`)
+console.error(`  MCP_KI_KB_NOTION_MIRROR_API_BASE_URL=${config.notionApiBaseUrl}`)
+console.error(`  MCP_KI_KB_NOTION_MIRROR_KB_ROOT=${config.kbRoot ?? '(unset — kb_path must be absolute)'}`)
+console.error(`  MCP_KI_KB_NOTION_MIRROR_ACCESS_LEVEL=${config.accessLevel}`)
 console.error(
-  `  MCP_KB_NOTION_MIRROR_AUDIT_LOG=${config.auditLogMode}${config.auditLogMode === 'off' ? '' : ` (path: ${config.auditLogPath})`}`
+  `  MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG=${config.auditLogMode}${config.auditLogMode === 'off' ? '' : ` (path: ${config.auditLogPath})`}`
 )
 
 const server = new McpServer({
-  name: 'mcp-kb-notion-mirror',
+  name: 'mcp-ki-kb-notion-mirror',
   version: '1.0.0'
 })
 server.registerTool = makeAccessGatedRegister(server, config.accessLevel, {
@@ -74,10 +74,10 @@ registerRootsTools(server, config, settings)
 const main = async (): Promise<void> => {
   const transport = new StdioServerTransport()
   await server.connect(transport)
-  console.error(`mcp-kb-notion-mirror ready`)
+  console.error(`mcp-ki-kb-notion-mirror ready`)
 }
 
 main().catch((err) => {
-  console.error('mcp-kb-notion-mirror fatal:', err)
+  console.error('mcp-ki-kb-notion-mirror fatal:', err)
   process.exit(1)
 })

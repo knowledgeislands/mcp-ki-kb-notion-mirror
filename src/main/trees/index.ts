@@ -42,7 +42,7 @@ export interface TreeOneResult {
 }
 
 const requireRoot = (cfg: Config): string => {
-  if (!cfg.kbRoot) throw new Error('MCP_KB_NOTION_MIRROR_KB_ROOT must be set — the tree walk needs a root.')
+  if (!cfg.kbRoot) throw new Error('MCP_KI_KB_NOTION_MIRROR_KB_ROOT must be set — the tree walk needs a root.')
   return cfg.kbRoot
 }
 

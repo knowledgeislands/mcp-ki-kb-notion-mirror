@@ -155,7 +155,7 @@ describe('tree verbs', () => {
   describe('touchTree', () => {
     it('throws when kbRoot is unset', async () => {
       await expect(touchTree({ ...cfg, kbRoot: undefined }, SUBTREE, ROOT_PARENT, s)).rejects.toThrow(
-        /MCP_KB_NOTION_MIRROR_KB_ROOT must be set/
+        /MCP_KI_KB_NOTION_MIRROR_KB_ROOT must be set/
       )
     })
 

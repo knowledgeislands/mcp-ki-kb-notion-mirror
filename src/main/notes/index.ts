@@ -120,7 +120,7 @@ const refreshFooterSafe = async (cfg: Config, parentPageId: string): Promise<voi
   try {
     await refreshFooter(cfg, parentPageId)
   } catch (err) {
-    console.error(`mcp-kb-notion-mirror: child-pages footer refresh failed for parent ${parentPageId}:`, err)
+    console.error(`mcp-ki-kb-notion-mirror: child-pages footer refresh failed for parent ${parentPageId}:`, err)
   }
 }
 

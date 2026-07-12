@@ -5,7 +5,7 @@
 // cover registration; this covers the actual protocol round-trip).
 //
 // Run via `bun run test:smoke` (builds dist/ first). Runs in CI without secrets:
-// the server only needs MCP_KB_NOTION_MIRROR_TOKEN to boot, so we pass a throwaway
+// the server only needs MCP_KI_KB_NOTION_MIRROR_TOKEN to boot, so we pass a throwaway
 // placeholder — no real Notion call is ever made.
 
 import * as os from 'node:os'
@@ -47,10 +47,10 @@ const main = async (): Promise<void> => {
     // `write` gate would otherwise hide unpublish).
     env: {
       ...(process.env as Record<string, string>),
-      MCP_KB_NOTION_MIRROR_TOKEN: 'ntn_smoke_placeholder',
-      MCP_KB_NOTION_MIRROR_KB_ROOT: os.tmpdir(),
-      MCP_KB_NOTION_MIRROR_ACCESS_LEVEL: 'destructive',
-      MCP_KB_NOTION_MIRROR_AUDIT_LOG: 'off'
+      MCP_KI_KB_NOTION_MIRROR_TOKEN: 'ntn_smoke_placeholder',
+      MCP_KI_KB_NOTION_MIRROR_KB_ROOT: os.tmpdir(),
+      MCP_KI_KB_NOTION_MIRROR_ACCESS_LEVEL: 'destructive',
+      MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG: 'off'
     }
   })
   const client = new Client({ name: 'mcp-kb-notion-mirror-smoke', version: '0.0.0' }, { capabilities: {} })

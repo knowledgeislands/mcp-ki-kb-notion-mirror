@@ -1,14 +1,14 @@
 {
-  "name": "@knowledgeislands/mcp-kb-notion-mirror",
+  "name": "@knowledgeislands/mcp-ki-kb-notion-mirror",
   "description": "MCP that mirrors local Knowledge Base markdown notes to a Notion wiki and records the resulting page URLs back into the notes' frontmatter",
   "version": "1.0.0",
   "author": "kris@kris.me.uk",
   "bin": {
-    "mcp-kb-notion-mirror": "dist/mcp-server/index.js",
-    "mcp-kb-notion-mirror-publish": "dist/cli/cli.js"
+    "mcp-ki-kb-notion-mirror": "dist/mcp-server/index.js",
+    "mcp-ki-kb-notion-mirror-publish": "dist/cli/cli.js"
   },
   "bugs": {
-    "url": "https://github.com/knowledgeislands/mcp-kb-notion-mirror/issues"
+    "url": "https://github.com/knowledgeislands/mcp-ki-kb-notion-mirror/issues"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
@@ -66,7 +66,7 @@
   "files": [
     "dist"
   ],
-  "homepage": "https://github.com/knowledgeislands/mcp-kb-notion-mirror#readme",
+  "homepage": "https://github.com/knowledgeislands/mcp-ki-kb-notion-mirror#readme",
   "keywords": [
     "anthropic",
     "claude",
@@ -87,7 +87,7 @@
   "packageManager": "bun@1.3.14",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/knowledgeislands/mcp-kb-notion-mirror.git"
+    "url": "git+https://github.com/knowledgeislands/mcp-ki-kb-notion-mirror.git"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && chmod +x dist/cli/cli.js",
@@ -100,7 +100,7 @@
     "ki:deps:refresh": "bun update --force",
     "ki:deps:update": "bun update --latest && bun install",
     "ki:engineering:audit": "bun .claude/skills/ki-engineering/scripts/audit-engineering.ts .",
-    "ki:generate:client": "mcporter emit-ts hnr-mcp-kb-notion-mirror --mode client --out src/generated/client.ts --types-out src/generated/types.d.ts && printf '// @ts-nocheck\\n' | cat - src/generated/client.ts > /tmp/gen-tmp.ts && mv /tmp/gen-tmp.ts src/generated/client.ts",
+    "ki:generate:client": "mcporter emit-ts hnr-mcp-ki-kb-notion-mirror --mode client --out src/generated/client.ts --types-out src/generated/types.d.ts && printf '// @ts-nocheck\\n' | cat - src/generated/client.ts > /tmp/gen-tmp.ts && mv /tmp/gen-tmp.ts src/generated/client.ts",
     "ki:init": "bun scripts/ki/aggregate.ts init",
     "ki:knip": "bunx knip --no-config-hints",
     "ki:lint:check": "bunx @biomejs/biome check",

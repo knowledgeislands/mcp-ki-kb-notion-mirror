@@ -17,7 +17,7 @@ const subtreeArg = z
   .max(4096)
   .refine(noParentSegment, 'subtree must not contain ".." segments')
   .describe(
-    'KB-relative folder path to mirror, e.g. "Alpha/Beta". Any folder under MCP_KB_NOTION_MIRROR_KB_ROOT. ".." segments are rejected and the path is confined under the KB root.'
+    'KB-relative folder path to mirror, e.g. "Alpha/Beta". Any folder under MCP_KI_KB_NOTION_MIRROR_KB_ROOT. ".." segments are rejected and the path is confined under the KB root.'
   )
 
 const kbPathArg = z
@@ -81,7 +81,7 @@ const treePreflightOutput = z.object({ issues: z.array(z.string()) })
  * anything escaping the root. Throws if kbRoot is unset.
  */
 const requireKbRoot = (cfg: Config): string => {
-  if (!cfg.kbRoot) throw new Error('MCP_KB_NOTION_MIRROR_KB_ROOT must be set to use the tree tools.')
+  if (!cfg.kbRoot) throw new Error('MCP_KI_KB_NOTION_MIRROR_KB_ROOT must be set to use the tree tools.')
   return cfg.kbRoot
 }
 
