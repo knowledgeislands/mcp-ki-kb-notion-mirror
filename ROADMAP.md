@@ -10,7 +10,6 @@ Actively broken, or blocking the `Next` horizon: takes priority over everything 
 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
 
-- [Foundation Tooling: Adopt uniform governance modes and bootstrap](docs/roadmap/foundation-tooling/ROADMAP.md#adopt-uniform-governance-modes-and-bootstrap)
 - [Tool Surface: Add `kb_notion_mirror_note_diff`](docs/roadmap/tool-surface/ROADMAP.md#add-kbnotionmirrornotediff)
 - [Tool Surface: Build image upload pipeline](docs/roadmap/tool-surface/ROADMAP.md#build-image-upload-pipeline)
 
