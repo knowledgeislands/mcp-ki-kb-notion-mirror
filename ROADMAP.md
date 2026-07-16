@@ -1,20 +1,30 @@
-# Roadmap
+# Project roadmap
 
-Forward-looking plans only. What the tool does today lives in [README.md](./README.md).
+This portfolio view is generated from the canonical theme roadmaps under `docs/roadmap/`. Edit those files, then run `ki-project-roadmap` CONFORM.
 
-## Current limitations
+## Blocking
 
-These are known limitations of the current behaviour, not bugs:
+Actively broken, or blocking the `Next` horizon: takes priority over everything else and must clear before `Next` work proceeds. Empty means nothing is on fire.
 
-1. **Images.** KB notes that reference local images render the image as alt-text + path rather than a real Notion image. Notion needs the file uploaded via `POST /v1/file_uploads` and referenced as an `image` block with `type: file_upload`; data URIs are rejected by Notion.
-2. **Unresolved wikilinks.** `[[X]]` becomes a Notion `@`mention only when a `link_map` entry for `X` exists (the `tree` verbs build this from touched notes). Targets not yet mirrored render as italic placeholder text.
+## Next
 
-## Next up
+Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
 
-- **Image upload pipeline** — resolve `<Note> - images/` siblings, upload via `POST /v1/file_uploads`, and swap the alt-text placeholder paragraphs for real `image` blocks.
-- **`kb_notion_mirror_note_diff`** — show the block-level diff an `update` would produce without writing, so callers can review before mutating.
+- [Foundation Tooling: Adopt uniform governance modes and bootstrap](docs/roadmap/foundation-tooling/ROADMAP.md#adopt-uniform-governance-modes-and-bootstrap)
+- [Tool Surface: Add `kb_notion_mirror_note_diff`](docs/roadmap/tool-surface/ROADMAP.md#add-kbnotionmirrornotediff)
+- [Tool Surface: Build image upload pipeline](docs/roadmap/tool-surface/ROADMAP.md#build-image-upload-pipeline)
 
-## Future ideas
+## Soon
 
-- **Backlink sync** — write the mirror's inbound links back into the KB note for a fuller provenance trail.
-- **Live integration test** — a token-gated `*.live.test.ts` (skipped by default) for occasional end-to-end verification against a throwaway Notion workspace, in particular the `kb_notion_mirror_note_move` cross-parent-type silent-failure detection.
+Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
+
+## Waiting for
+
+Worth doing, but presently blocked on an external dependency or decision. Revisit when its named condition changes rather than treating it as dormant local work.
+
+## Future
+
+Speculative or not yet scoped — items marked _(candidate)_ need a scoping pass (or a decision to drop them) before they're actionable.
+
+- [Tool Surface: Add a token-gated live integration test](docs/roadmap/tool-surface/ROADMAP.md#add-a-token-gated-live-integration-test)
+- [Tool Surface: Synchronise backlinks](docs/roadmap/tool-surface/ROADMAP.md#synchronise-backlinks)
