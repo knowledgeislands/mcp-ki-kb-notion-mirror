@@ -1,3 +1,7 @@
+---
+code: TOOL
+---
+
 # Tool surface roadmap
 
 Current limitations: local images currently render as alt-text and a path because Notion needs them uploaded through `POST /v1/file_uploads`; unresolved wikilinks render as italic placeholder text until their target has a `link_map` entry.

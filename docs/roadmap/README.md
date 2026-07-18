@@ -4,7 +4,6 @@ Canonical themes and active execution plans.
 
 ## Themes
 
-- [foundation-tooling](foundation-tooling/ROADMAP.md)
 - [tool-surface](tool-surface/ROADMAP.md)
 
 ## Active plans
