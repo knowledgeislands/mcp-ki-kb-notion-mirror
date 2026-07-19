@@ -1,4 +1,4 @@
-// Generated on 2026-07-18T16:27:44.021Z by @knowledgeislands/mcp-ki-kb-notion-mirror@1.0.0
+// Generated on 2026-07-19T00:07:50.848Z by @knowledgeislands/mcp-ki-kb-notion-mirror@1.0.0
 // Server: hnr-mcp-ki-kb-notion-mirror
 // Source: /Users/krisbrown/.mcporter/mcporter.json
 // Transport: STDIO /Users/krisbrown/.local/share/mise/installs/node/lts/bin/node /Users/krisbrown/workspaces/kis/knowledgeislands/mcp-ki-kb-notion-mirror/dist/mcp-server/index.js
