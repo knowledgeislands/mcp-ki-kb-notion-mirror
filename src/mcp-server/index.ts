@@ -58,7 +58,7 @@ console.error(
 
 const server = new McpServer({
   name: 'mcp-ki-kb-notion-mirror',
-  version: '1.0.0'
+  version: '0.9.0'
 })
 server.registerTool = makeAccessGatedRegister(server, config.accessLevel, {
   mode: config.auditLogMode,
