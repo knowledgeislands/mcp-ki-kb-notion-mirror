@@ -205,15 +205,9 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): Config => {
     accessLevel: parseAccessLevel(env.MCP_KI_KB_NOTION_MIRROR_ACCESS_LEVEL),
     auditLogMode: parseAuditLogMode(env.MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG),
     auditLogPath: path.resolve(
-      expandHome(
-        env.MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_PATH ?? path.join(os.homedir(), '.local', 'state', 'mcp-ki-kb-notion-mirror', 'audit.jsonl')
-      )
+      expandHome(env.MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_PATH ?? path.join(os.homedir(), '.local', 'state', 'mcp-ki-kb-notion-mirror', 'audit.jsonl'))
     ),
-    auditLogMaxBytes: parseNonNegativeInt(
-      env.MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES,
-      10 * 1024 * 1024,
-      'MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES'
-    ),
+    auditLogMaxBytes: parseNonNegativeInt(env.MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES, 10 * 1024 * 1024, 'MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES'),
     auditLogKeep: parseNonNegativeInt(env.MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_KEEP, 5, 'MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_KEEP')
   }
 }

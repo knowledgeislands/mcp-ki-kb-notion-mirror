@@ -186,5 +186,4 @@ export const pruneTree = (cfg: Config, subtree: string, s: MirrorSettings, opts:
   prune(cfg, s, { subtree, dryRun: opts.dryRun })
 
 /** Archive orphaned mirror pages across the whole KB (every deleted note, any root). */
-export const pruneRoots = (cfg: Config, s: MirrorSettings, opts: { dryRun: boolean }): Promise<TreeResult> =>
-  prune(cfg, s, { dryRun: opts.dryRun })
+export const pruneRoots = (cfg: Config, s: MirrorSettings, opts: { dryRun: boolean }): Promise<TreeResult> => prune(cfg, s, { dryRun: opts.dryRun })

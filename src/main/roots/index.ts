@@ -73,8 +73,7 @@ export const discoverRoots = (kbRoot: string, s: MirrorSettings): MirrorRoot[] =
         if (!isEligible(idx, s)) continue // excluded / skip-listed index → prune this branch
         const value = rootValueOf(idx)
         if (value) {
-          if (value === 'true')
-            throw new Error(`kb_notion_mirror_root on ${idx.kbPath} must be the Notion parent id (a wiki database id), not "true"`)
+          if (value === 'true') throw new Error(`kb_notion_mirror_root on ${idx.kbPath} must be the Notion parent id (a wiki database id), not "true"`)
           roots.push({ subtree: relative(kbRoot, folder), indexKbPath: idx.kbPath, parent: parseRootParent(value) })
           continue // PRUNE — a root cannot nest a root
         }

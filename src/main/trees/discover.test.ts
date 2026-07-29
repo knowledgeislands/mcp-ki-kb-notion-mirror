@@ -11,16 +11,7 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { NotionParent } from '../notion-client/index.js'
-import {
-  buildLinkMap,
-  discover,
-  iconFor,
-  indexKbPathFor,
-  MAX_WALK_DEPTH,
-  publishOrder,
-  readFrontmatter,
-  resolveParent
-} from './discover.js'
+import { buildLinkMap, discover, iconFor, indexKbPathFor, MAX_WALK_DEPTH, publishOrder, readFrontmatter, resolveParent } from './discover.js'
 import type { MirrorSettings } from './settings.js'
 
 const PAGE_ID = '3709f7187cc281dd9a32c190c3eaf8b6'

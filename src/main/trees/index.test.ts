@@ -154,9 +154,7 @@ describe('tree verbs', () => {
 
   describe('touchTree', () => {
     it('throws when kbRoot is unset', async () => {
-      await expect(touchTree({ ...cfg, kbRoot: undefined }, SUBTREE, ROOT_PARENT, s)).rejects.toThrow(
-        /MCP_KI_KB_NOTION_MIRROR_KB_ROOT must be set/
-      )
+      await expect(touchTree({ ...cfg, kbRoot: undefined }, SUBTREE, ROOT_PARENT, s)).rejects.toThrow(/MCP_KI_KB_NOTION_MIRROR_KB_ROOT must be set/)
     })
 
     it('scaffolds every note and writes URLs back', async () => {
@@ -286,9 +284,7 @@ describe('tree verbs', () => {
       // live last_edited == stored published_at → not drifted → hash skip
       expect(res.outcomes.map((o) => o.action)).toEqual(['skip'])
       // but the drift READ did happen
-      expect(fetchMock.mock.calls.some((c) => /\/v1\/pages\/[a-f0-9]{32}$/.test(String(c[0])) && (c[1]?.method ?? 'GET') === 'GET')).toBe(
-        true
-      )
+      expect(fetchMock.mock.calls.some((c) => /\/v1\/pages\/[a-f0-9]{32}$/.test(String(c[0])) && (c[1]?.method ?? 'GET') === 'GET')).toBe(true)
     })
 
     it('verify force re-pushes a page Notion edited after the last mirror (drift)', async () => {

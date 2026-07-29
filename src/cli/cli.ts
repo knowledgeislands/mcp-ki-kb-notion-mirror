@@ -230,8 +230,7 @@ const runRoots = async (verb: string, argv: string[], dryRun: boolean): Promise<
     console.log('No mirror roots declared (kb_notion_mirror_root).')
     return
   }
-  const globalLinkMap = (): Record<string, string> =>
-    buildLinkMap(roots.flatMap((r) => publishOrder(kbRoot, r.subtree, s, discover(kbRoot, r.subtree, s))))
+  const globalLinkMap = (): Record<string, string> => buildLinkMap(roots.flatMap((r) => publishOrder(kbRoot, r.subtree, s, discover(kbRoot, r.subtree, s))))
   // One root's own notes — overlaid on the global map so a bare [[Name]] that
   // collides across roots resolves to THIS root's note, not whichever root sorts
   // last in the global map. Mirrors the MCP tree-update default.

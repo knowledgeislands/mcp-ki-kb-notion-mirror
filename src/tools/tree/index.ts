@@ -36,17 +36,12 @@ const linkMapArg = z
 const statusInput = z.object({ subtree: subtreeArg }).strict()
 const preflightInput = z.object({ subtree: subtreeArg }).strict()
 const touchInput = z.object({ subtree: subtreeArg, parent: parentArg, kb_path: kbPathArg.optional() }).strict()
-const updateInput = z
-  .object({ subtree: subtreeArg, parent: parentArg, kb_path: kbPathArg.optional(), link_map: linkMapArg.optional() })
-  .strict()
+const updateInput = z.object({ subtree: subtreeArg, parent: parentArg, kb_path: kbPathArg.optional(), link_map: linkMapArg.optional() }).strict()
 const deleteInput = z
   .object({
     subtree: subtreeArg,
     kb_path: kbPathArg.optional(),
-    dry_run: z
-      .boolean()
-      .default(true)
-      .describe('When true (default) report what would be archived without calling Notion or editing notes.')
+    dry_run: z.boolean().default(true).describe('When true (default) report what would be archived without calling Notion or editing notes.')
   })
   .strict()
 const pruneInput = z

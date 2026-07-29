@@ -282,9 +282,7 @@ Errors:
     },
     async ({ kb_path, parent, icon, link_map }) => {
       try {
-        return jsonResult(
-          await updateNote(cfg, kb_path, parent as NotionParent, { icon: icon as NotionIcon | undefined, linkMap: link_map })
-        )
+        return jsonResult(await updateNote(cfg, kb_path, parent as NotionParent, { icon: icon as NotionIcon | undefined, linkMap: link_map }))
       } catch (err) {
         return errorResult('updating note', err)
       }

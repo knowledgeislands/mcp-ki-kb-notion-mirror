@@ -100,9 +100,7 @@ describe('notion-client (mcp-kb-notion-mirror)', () => {
     })
 
     it('throws when a database parent is given without a title property name', async () => {
-      await expect(createPage(cfg, { parent: { type: 'database_id', database_id: DB_ID }, title: 'x', children: [] })).rejects.toThrow(
-        NotionApiError
-      )
+      await expect(createPage(cfg, { parent: { type: 'database_id', database_id: DB_ID }, title: 'x', children: [] })).rejects.toThrow(NotionApiError)
       expect(fetchMock).not.toHaveBeenCalled()
     })
 
@@ -219,18 +217,14 @@ describe('notion-client (mcp-kb-notion-mirror)', () => {
     })
 
     it('deleteBlock still throws on a non-archived failure', async () => {
-      fetchMock.mockResolvedValueOnce(
-        new Response(JSON.stringify({ code: 'validation_error', message: 'Some other validation problem.' }), { status: 400 })
-      )
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ code: 'validation_error', message: 'Some other validation problem.' }), { status: 400 }))
       await expect(deleteBlock(cfg, PAGE_HEX)).rejects.toThrow(NotionApiError)
     })
   })
 
   describe('error translation', () => {
     it('throws NotionApiError with status + code + message, never leaking the token', async () => {
-      fetchMock.mockResolvedValueOnce(
-        new Response(JSON.stringify({ code: 'unauthorized', message: 'API token is invalid.' }), { status: 401 })
-      )
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ code: 'unauthorized', message: 'API token is invalid.' }), { status: 401 }))
       const err = await archivePage(cfg, PAGE_HEX).catch((e) => e)
       expect(err).toBeInstanceOf(NotionApiError)
       expect(err.status).toBe(401)

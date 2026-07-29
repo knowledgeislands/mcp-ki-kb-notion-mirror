@@ -93,10 +93,7 @@ describe('convertMentionPlaceholders', () => {
       object: 'block',
       type: 'table_row',
       table_row: {
-        cells: [
-          [{ type: 'text', text: { content: 'Auth' } }],
-          [{ type: 'text', text: { content: 'ADR-AUTH', link: { url: `mention:${HEX}` } } }]
-        ]
+        cells: [[{ type: 'text', text: { content: 'Auth' } }], [{ type: 'text', text: { content: 'ADR-AUTH', link: { url: `mention:${HEX}` } } }]]
       }
     }
     const out = convertMentionPlaceholders([row]) as Array<{ table_row: { cells: Array<Array<Record<string, unknown>>> } }>

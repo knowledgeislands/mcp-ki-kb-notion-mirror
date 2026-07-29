@@ -71,12 +71,7 @@ const request = async <T>(cfg: NotionConfig, method: 'GET' | 'POST' | 'PATCH' | 
       // non-JSON error body — fall back to the raw text
     }
     const snippet = detail.length > 500 ? `${detail.slice(0, 500)}…` : detail
-    throw new NotionApiError(
-      resp.status,
-      text,
-      code,
-      `Notion ${method} ${apiPath} → HTTP ${resp.status}${code ? ` (${code})` : ''}: ${snippet}`
-    )
+    throw new NotionApiError(resp.status, text, code, `Notion ${method} ${apiPath} → HTTP ${resp.status}${code ? ` (${code})` : ''}: ${snippet}`)
   }
   try {
     return JSON.parse(text) as T
@@ -98,12 +93,7 @@ export const normalizeId = (id: string): string => {
   const lower = id.toLowerCase()
   if (BARE_ID_RE.test(lower)) return lower
   if (DASHED_ID_RE.test(lower)) return lower.replace(/-/g, '')
-  throw new NotionApiError(
-    0,
-    '',
-    'invalid_id',
-    `Refusing to call Notion with a malformed id: "${id}" (expected 32 hex chars or a dashed UUID)`
-  )
+  throw new NotionApiError(0, '', 'invalid_id', `Refusing to call Notion with a malformed id: "${id}" (expected 32 hex chars or a dashed UUID)`)
 }
 
 /** Pull the 32-hex page id out of a notion.so URL (handles slug + query suffixes). */

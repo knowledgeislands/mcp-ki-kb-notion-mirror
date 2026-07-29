@@ -42,12 +42,10 @@ describe('footer', () => {
       expect(SENTINEL_TEXT).toBe('Child Pages')
       const blocks = buildFooterBlocks()
       expect(blocks).toHaveLength(1)
-      expect((blocks[0] as unknown as { type: string; heading_2: { rich_text: Array<{ text: { content: string } }> } }).type).toBe(
-        'heading_2'
+      expect((blocks[0] as unknown as { type: string; heading_2: { rich_text: Array<{ text: { content: string } }> } }).type).toBe('heading_2')
+      expect((blocks[0] as unknown as { heading_2: { rich_text: Array<{ text: { content: string } }> } }).heading_2.rich_text[0].text.content).toBe(
+        'Child Pages'
       )
-      expect(
-        (blocks[0] as unknown as { heading_2: { rich_text: Array<{ text: { content: string } }> } }).heading_2.rich_text[0].text.content
-      ).toBe('Child Pages')
     })
   })
 

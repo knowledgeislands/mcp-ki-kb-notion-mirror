@@ -301,12 +301,7 @@ export const baselineTree = async (
  * before parents. `dryRun` (default true at the tool boundary) reports what
  * would be archived without calling Notion or editing notes.
  */
-export const deleteTree = async (
-  cfg: Config,
-  subtree: string,
-  s: MirrorSettings,
-  opts: { kbPath?: string; dryRun: boolean }
-): Promise<TreeResult> => {
+export const deleteTree = async (cfg: Config, subtree: string, s: MirrorSettings, opts: { kbPath?: string; dryRun: boolean }): Promise<TreeResult> => {
   const kbRoot = requireRoot(cfg)
   const notes = [...notesFor(kbRoot, subtree, s, opts.kbPath)].reverse()
   const outcomes: NoteOutcome[] = []
@@ -324,13 +319,7 @@ export const deleteTree = async (
 }
 
 /** Touch then update one note's ancestor chain in a subtree (single-note convenience for the CLI). */
-export const publishTreeNote = async (
-  cfg: Config,
-  subtree: string,
-  parent: NotionParent,
-  s: MirrorSettings,
-  kbPath: string
-): Promise<TreeOneResult> => {
+export const publishTreeNote = async (cfg: Config, subtree: string, parent: NotionParent, s: MirrorSettings, kbPath: string): Promise<TreeOneResult> => {
   const touched = await touchTree(cfg, subtree, parent, s, kbPath)
   const updated = await updateTree(cfg, subtree, parent, s, { kbPath })
   return { chain: touched.outcomes.map((o) => o.kbPath), outcomes: [...touched.outcomes, ...updated.outcomes] }
