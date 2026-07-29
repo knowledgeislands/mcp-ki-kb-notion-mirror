@@ -87,26 +87,29 @@ const requireKbRoot = (cfg: Config): string => {
 
 export const registerTreeTools = (server: McpServer, cfg: Config, settings: MirrorSettings): void => {
   server.registerTool(
-    'kb_notion_mirror_tree_status',
+    'kb_notion_mirror_tree_delete',
     {
-      title: 'Status of a KB subtree mirror',
-      description: `Report which notes in a KB subtree are already mirrored to Notion, ordered the way a touch/update would visit them.
+      title: 'Delete a KB subtree mirror',
+      description: `Archive the mirror page of every note in a subtree (or one note's chain) and clear their mirror frontmatter, children before parents. Destructive — defaults to a dry run. Archiving breaks any @mention pointing at these pages.
 
 Args:
-  - subtree (string, required): kb-relative folder to walk (e.g. "Alpha/Beta").
+  - subtree (string, required): kb-relative folder to walk.
+  - kb_path (string, optional): delete just this note's ancestor chain.
+  - dry_run (boolean, default true): when true, report what would be archived without calling Notion or editing notes.
 
-Returns: { total, published, pending, notes: [{ kbPath, published }] }. Pure read — no Notion call, no file change.`,
-      inputSchema: statusInput,
-      outputSchema: treeStatusOutput,
-      annotations: READ_ONLY_REMOTE
+Returns: { eligible, outcomes: NoteOutcome[] } where NoteOutcome = { kbPath, action: "delete"|"plan"|"skip"|"error", url?, error? }.`,
+      inputSchema: deleteInput,
+      outputSchema: treeResultOutput,
+      annotations: DESTRUCTIVE_REMOTE
     },
-    async ({ subtree }) => {
+    async ({ subtree, kb_path, dry_run }) => {
       try {
         const kbRoot = requireKbRoot(cfg)
         resolveKbNotePath(kbRoot, subtree)
-        return jsonResult(statusTree(kbRoot, subtree, settings))
+        if (kb_path !== undefined) resolveKbNotePath(kbRoot, kb_path)
+        return jsonResult(await deleteTree(cfg, subtree, settings, { kbPath: kb_path, dryRun: dry_run }))
       } catch (err) {
-        return errorResult('reading subtree status', err)
+        return errorResult('deleting subtree', err)
       }
     }
   )
@@ -132,6 +135,57 @@ Returns: { issues: string[] } — empty when the subtree is mirror-ready. Pure r
         return jsonResult(preflightTree(kbRoot, subtree, settings))
       } catch (err) {
         return errorResult('preflighting subtree', err)
+      }
+    }
+  )
+
+  server.registerTool(
+    'kb_notion_mirror_tree_prune',
+    {
+      title: 'Prune orphaned mirror pages in a KB subtree',
+      description: `Archive Notion pages whose backing KB note has been DELETED under a subtree. Git-driven: an orphan is a note deleted in git history (or in the working tree relative to HEAD) whose kb_notion_mirror_url is no longer present in any live note on disk — a note that merely MOVED keeps its url and is never pruned. Destructive — defaults to a dry run. Requires the KB root to be a git repository.
+
+Args:
+  - subtree (string, required): kb-relative folder to scan for deleted notes.
+  - dry_run (boolean, default true): when true, report which orphaned pages would be archived without calling Notion.
+
+Returns: { eligible, outcomes: NoteOutcome[] } where NoteOutcome = { kbPath (the deleted note's path), action: "plan"|"delete"|"error", url?, error? }.`,
+      inputSchema: pruneInput,
+      outputSchema: treeResultOutput,
+      annotations: DESTRUCTIVE_REMOTE
+    },
+    async ({ subtree, dry_run }) => {
+      try {
+        const kbRoot = requireKbRoot(cfg)
+        resolveKbNotePath(kbRoot, subtree)
+        return jsonResult(await pruneTree(cfg, subtree, settings, { dryRun: dry_run }))
+      } catch (err) {
+        return errorResult('pruning subtree', err)
+      }
+    }
+  )
+
+  server.registerTool(
+    'kb_notion_mirror_tree_status',
+    {
+      title: 'Status of a KB subtree mirror',
+      description: `Report which notes in a KB subtree are already mirrored to Notion, ordered the way a touch/update would visit them.
+
+Args:
+  - subtree (string, required): kb-relative folder to walk (e.g. "Alpha/Beta").
+
+Returns: { total, published, pending, notes: [{ kbPath, published }] }. Pure read — no Notion call, no file change.`,
+      inputSchema: statusInput,
+      outputSchema: treeStatusOutput,
+      annotations: READ_ONLY_REMOTE
+    },
+    async ({ subtree }) => {
+      try {
+        const kbRoot = requireKbRoot(cfg)
+        resolveKbNotePath(kbRoot, subtree)
+        return jsonResult(statusTree(kbRoot, subtree, settings))
+      } catch (err) {
+        return errorResult('reading subtree status', err)
       }
     }
   )
@@ -189,60 +243,6 @@ Returns: { eligible, outcomes: NoteOutcome[] } where NoteOutcome = { kbPath, act
         return jsonResult(await updateTree(cfg, subtree, parent as NotionParent, settings, { kbPath: kb_path, linkMap: link_map }))
       } catch (err) {
         return errorResult('updating subtree', err)
-      }
-    }
-  )
-
-  server.registerTool(
-    'kb_notion_mirror_tree_delete',
-    {
-      title: 'Delete a KB subtree mirror',
-      description: `Archive the mirror page of every note in a subtree (or one note's chain) and clear their mirror frontmatter, children before parents. Destructive — defaults to a dry run. Archiving breaks any @mention pointing at these pages.
-
-Args:
-  - subtree (string, required): kb-relative folder to walk.
-  - kb_path (string, optional): delete just this note's ancestor chain.
-  - dry_run (boolean, default true): when true, report what would be archived without calling Notion or editing notes.
-
-Returns: { eligible, outcomes: NoteOutcome[] } where NoteOutcome = { kbPath, action: "delete"|"plan"|"skip"|"error", url?, error? }.`,
-      inputSchema: deleteInput,
-      outputSchema: treeResultOutput,
-      annotations: DESTRUCTIVE_REMOTE
-    },
-    async ({ subtree, kb_path, dry_run }) => {
-      try {
-        const kbRoot = requireKbRoot(cfg)
-        resolveKbNotePath(kbRoot, subtree)
-        if (kb_path !== undefined) resolveKbNotePath(kbRoot, kb_path)
-        return jsonResult(await deleteTree(cfg, subtree, settings, { kbPath: kb_path, dryRun: dry_run }))
-      } catch (err) {
-        return errorResult('deleting subtree', err)
-      }
-    }
-  )
-
-  server.registerTool(
-    'kb_notion_mirror_tree_prune',
-    {
-      title: 'Prune orphaned mirror pages in a KB subtree',
-      description: `Archive Notion pages whose backing KB note has been DELETED under a subtree. Git-driven: an orphan is a note deleted in git history (or in the working tree relative to HEAD) whose kb_notion_mirror_url is no longer present in any live note on disk — a note that merely MOVED keeps its url and is never pruned. Destructive — defaults to a dry run. Requires the KB root to be a git repository.
-
-Args:
-  - subtree (string, required): kb-relative folder to scan for deleted notes.
-  - dry_run (boolean, default true): when true, report which orphaned pages would be archived without calling Notion.
-
-Returns: { eligible, outcomes: NoteOutcome[] } where NoteOutcome = { kbPath (the deleted note's path), action: "plan"|"delete"|"error", url?, error? }.`,
-      inputSchema: pruneInput,
-      outputSchema: treeResultOutput,
-      annotations: DESTRUCTIVE_REMOTE
-    },
-    async ({ subtree, dry_run }) => {
-      try {
-        const kbRoot = requireKbRoot(cfg)
-        resolveKbNotePath(kbRoot, subtree)
-        return jsonResult(await pruneTree(cfg, subtree, settings, { dryRun: dry_run }))
-      } catch (err) {
-        return errorResult('pruning subtree', err)
       }
     }
   )

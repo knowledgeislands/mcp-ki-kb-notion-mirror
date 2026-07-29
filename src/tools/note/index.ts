@@ -93,6 +93,35 @@ const deleteNoteOutput = z.union([
 
 export const registerNoteTools = (server: McpServer, cfg: Config): void => {
   server.registerTool(
+    'kb_notion_mirror_note_delete',
+    {
+      title: 'Archive a note mirror page',
+      description: `Archive the Notion page referenced by a note's kb_notion_mirror_url and clear the two mirror frontmatter fields. Destructive — defaults to a dry run. Archiving breaks any @mention pointing at this page, hence the preview default.
+
+Caveat: archiving cascade-archives descendant pages on the Notion side. This tool only clears the one note's frontmatter; descendants' frontmatter still points at now-archived pages (caller's responsibility — use tree delete to clear a whole subtree).
+
+Args:
+  - kb_path (string, required): path to the KB markdown note.
+  - dry_run (boolean, default true): when true, report what would happen WITHOUT calling Notion or editing the note.
+
+Returns:
+  - dry_run true: { dry_run: true, would_archive_url, would_archive_page_id, would_clear_fields }.
+  - dry_run false: { archived: true, page_id, url }.
+  - note not mirrored: { archived: false, reason: "not-mirrored" }.`,
+      inputSchema: deleteInput,
+      outputSchema: deleteNoteOutput,
+      annotations: DESTRUCTIVE_REMOTE
+    },
+    async ({ kb_path, dry_run }) => {
+      try {
+        return jsonResult(await deleteNote(cfg, kb_path, dry_run))
+      } catch (err) {
+        return errorResult('deleting note mirror', err)
+      }
+    }
+  )
+
+  server.registerTool(
     'kb_notion_mirror_note_get',
     {
       title: 'Fetch the live Notion state of a note mirror page',
@@ -122,24 +151,31 @@ Errors:
   )
 
   server.registerTool(
-    'kb_notion_mirror_note_status',
+    'kb_notion_mirror_note_move',
     {
-      title: 'Local mirror-state of a note',
-      description: `Report whether a note is mirrored, from its frontmatter only. No Notion call, no file change.
+      title: 'Re-parent an already-mirrored note page',
+      description: `Move an already-mirrored note's page under a caller-supplied parent. The page content and URL are unchanged — only its position in the Notion tree. No frontmatter change.
+
+Caveat: Notion cannot move a page between a page_id parent and a database_id parent — PATCH /v1/pages silently ignores it. This tool detects that case and errors clearly; use delete + touch instead.
 
 Args:
-  - kb_path (string, required): path to the KB markdown note.
+  - kb_path (string, required): the KB markdown note (must already have kb_notion_mirror_url).
+  - parent (object, required): the new Notion parent, same shape as touch.
 
-Returns: { published: true, url, published_at } | { published: false }.`,
-      inputSchema: statusInput,
-      outputSchema: statusNoteOutput,
-      annotations: READ_ONLY_REMOTE
+Returns: { moved: true, page_id, previous_parent, new_parent }.
+
+Errors:
+  - "Note is not mirrored — cannot move."
+  - "Notion silently ignored the parent change …" — page-id ↔ database-id move attempted.`,
+      inputSchema: moveInput,
+      outputSchema: moveNoteOutput,
+      annotations: WRITE_REMOTE_IDEMPOTENT
     },
-    async ({ kb_path }) => {
+    async ({ kb_path, parent }) => {
       try {
-        return jsonResult(await statusNote(cfg, kb_path))
+        return jsonResult(await moveNote(cfg, kb_path, parent as NotionParent))
       } catch (err) {
-        return errorResult('reading note status', err)
+        return errorResult('moving note', err)
       }
     }
   )
@@ -163,6 +199,29 @@ Returns: { ok: boolean, issues: string[] } — empty issues when the note is mir
         return jsonResult(await preflightNote(cfg, kb_path))
       } catch (err) {
         return errorResult('preflighting note', err)
+      }
+    }
+  )
+
+  server.registerTool(
+    'kb_notion_mirror_note_status',
+    {
+      title: 'Local mirror-state of a note',
+      description: `Report whether a note is mirrored, from its frontmatter only. No Notion call, no file change.
+
+Args:
+  - kb_path (string, required): path to the KB markdown note.
+
+Returns: { published: true, url, published_at } | { published: false }.`,
+      inputSchema: statusInput,
+      outputSchema: statusNoteOutput,
+      annotations: READ_ONLY_REMOTE
+    },
+    async ({ kb_path }) => {
+      try {
+        return jsonResult(await statusNote(cfg, kb_path))
+      } catch (err) {
+        return errorResult('reading note status', err)
       }
     }
   )
@@ -228,65 +287,6 @@ Errors:
         )
       } catch (err) {
         return errorResult('updating note', err)
-      }
-    }
-  )
-
-  server.registerTool(
-    'kb_notion_mirror_note_move',
-    {
-      title: 'Re-parent an already-mirrored note page',
-      description: `Move an already-mirrored note's page under a caller-supplied parent. The page content and URL are unchanged — only its position in the Notion tree. No frontmatter change.
-
-Caveat: Notion cannot move a page between a page_id parent and a database_id parent — PATCH /v1/pages silently ignores it. This tool detects that case and errors clearly; use delete + touch instead.
-
-Args:
-  - kb_path (string, required): the KB markdown note (must already have kb_notion_mirror_url).
-  - parent (object, required): the new Notion parent, same shape as touch.
-
-Returns: { moved: true, page_id, previous_parent, new_parent }.
-
-Errors:
-  - "Note is not mirrored — cannot move."
-  - "Notion silently ignored the parent change …" — page-id ↔ database-id move attempted.`,
-      inputSchema: moveInput,
-      outputSchema: moveNoteOutput,
-      annotations: WRITE_REMOTE_IDEMPOTENT
-    },
-    async ({ kb_path, parent }) => {
-      try {
-        return jsonResult(await moveNote(cfg, kb_path, parent as NotionParent))
-      } catch (err) {
-        return errorResult('moving note', err)
-      }
-    }
-  )
-
-  server.registerTool(
-    'kb_notion_mirror_note_delete',
-    {
-      title: 'Archive a note mirror page',
-      description: `Archive the Notion page referenced by a note's kb_notion_mirror_url and clear the two mirror frontmatter fields. Destructive — defaults to a dry run. Archiving breaks any @mention pointing at this page, hence the preview default.
-
-Caveat: archiving cascade-archives descendant pages on the Notion side. This tool only clears the one note's frontmatter; descendants' frontmatter still points at now-archived pages (caller's responsibility — use tree delete to clear a whole subtree).
-
-Args:
-  - kb_path (string, required): path to the KB markdown note.
-  - dry_run (boolean, default true): when true, report what would happen WITHOUT calling Notion or editing the note.
-
-Returns:
-  - dry_run true: { dry_run: true, would_archive_url, would_archive_page_id, would_clear_fields }.
-  - dry_run false: { archived: true, page_id, url }.
-  - note not mirrored: { archived: false, reason: "not-mirrored" }.`,
-      inputSchema: deleteInput,
-      outputSchema: deleteNoteOutput,
-      annotations: DESTRUCTIVE_REMOTE
-    },
-    async ({ kb_path, dry_run }) => {
-      try {
-        return jsonResult(await deleteNote(cfg, kb_path, dry_run))
-      } catch (err) {
-        return errorResult('deleting note mirror', err)
       }
     }
   )
