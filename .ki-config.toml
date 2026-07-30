@@ -1,4 +1,7 @@
 ["knowledgeislands/ki-agentic-harness:ki-repo"]
+title = "mcp-ki-kb-notion-mirror"
+description = "MCP that mirrors local Knowledge Base markdown notes to a Notion wiki and records the resulting page URLs back into the notes' frontmatter"
+repo_code = "MCP-NOTION"
 supported_runtimes = ["claude-code", "codex"]
 visibility = "public"
 
@@ -9,8 +12,6 @@ visibility = "public"
 ["knowledgeislands/ki-agentic-harness:ki-mcp"]
 
 ["knowledgeislands/ki-agentic-harness:ki-roadmap"]
-repo_code = "MCP-NOTION"
-
 ["knowledgeislands/ki-agentic-harness:ki-roadmap".themes]
 TOOL = "tool-surface"
 
