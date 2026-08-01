@@ -11,7 +11,7 @@
     "url": "https://github.com/knowledgeislands/mcp-ki-kb-notion-mirror/issues"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@tryfabric/martian": "^1.2.4",
     "zod": "^4.4.3"
   },
