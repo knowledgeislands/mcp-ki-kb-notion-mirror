@@ -2,7 +2,7 @@
 title = "mcp-ki-kb-notion-mirror"
 description = "MCP that mirrors local Knowledge Base markdown notes to a Notion wiki and records the resulting page URLs back into the notes' frontmatter"
 repo_code = "MCP-NOTION"
-supported_runtimes = ["claude-code", "codex"]
+supported_runtimes = ["claude-code", "chatgpt-codex"]
 visibility = "public"
 
 ["knowledgeislands/ki-agentic-harness:ki-authoring"]
