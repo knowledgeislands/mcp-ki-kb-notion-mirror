@@ -10,6 +10,10 @@ blocked-by: []
 baseline-ref: null
 ---
 
+## Goal
+
+Achieve the stated outcome: Add a token-gated live integration test.
+
 ## Context
 
 Add a skipped-by-default `*.live.test.ts` suite for occasional end-to-end checks against a throwaway Notion workspace, including cross-parent-type move failure detection.

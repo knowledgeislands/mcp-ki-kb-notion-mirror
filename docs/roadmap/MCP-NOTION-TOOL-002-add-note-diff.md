@@ -9,6 +9,10 @@ blocked-by: []
 baseline-ref: null
 ---
 
+## Goal
+
+Achieve the stated outcome: Add kb_notion_mirror_note_diff.
+
 ## Context
 
 Expose the block-level diff an update would produce without writing, so callers can review a mutation before it occurs.
@@ -29,12 +33,12 @@ The wire surface is fixed at fourteen tools: `EXPECTED_TOOLS` in [scripts/smoke.
 
 ## Steps
 
-1. Factor the shared render sequence out of `updateNote` into a named function in `src/main/notes/`, so update and diff provably render from one implementation rather than two.
-2. Settle the comparison granularity and result shape as an explicit decision before implementing — block identity does not survive a `replaceBody` push, so what "changed" means here needs defining rather than assuming.
-3. Add `diffNote` to `src/main/notes/index.ts`: render locally, fetch the live children via `getBlockChildren`, and return the structured comparison, with no write of any kind and no frontmatter mutation.
-4. Register `kb_notion_mirror_note_diff` in `src/tools/note/index.ts` with `READ_ONLY_REMOTE`, add the matching `note diff` CLI verb and usage line in `src/cli/cli.ts`, and raise `EXPECTED_TOOLS` to fifteen.
-5. Add co-located tests over a stateful `fetch` stub with the synthetic Greek fixtures, covering identical, added, removed, and modified bodies, plus the not-yet-mirrored case.
-6. Document the verb in the README's verb model and tools table.
+- [ ] Factor the shared render sequence out of `updateNote` into a named function in `src/main/notes/`, so update and diff provably render from one implementation rather than two.
+- [ ] Settle the comparison granularity and result shape as an explicit decision before implementing — block identity does not survive a `replaceBody` push, so what "changed" means here needs defining rather than assuming.
+- [ ] Add `diffNote` to `src/main/notes/index.ts`: render locally, fetch the live children via `getBlockChildren`, and return the structured comparison, with no write of any kind and no frontmatter mutation.
+- [ ] Register `kb_notion_mirror_note_diff` in `src/tools/note/index.ts` with `READ_ONLY_REMOTE`, add the matching `note diff` CLI verb and usage line in `src/cli/cli.ts`, and raise `EXPECTED_TOOLS` to fifteen.
+- [ ] Add co-located tests over a stateful `fetch` stub with the synthetic Greek fixtures, covering identical, added, removed, and modified bodies, plus the not-yet-mirrored case.
+- [ ] Document the verb in the README's verb model and tools table.
 
 ## Files touched
 

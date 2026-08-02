@@ -10,6 +10,10 @@ blocked-by: []
 baseline-ref: null
 ---
 
+## Goal
+
+Achieve the stated outcome: Synchronise backlinks.
+
 ## Context
 
 Write the mirror's inbound links back into the KB note for a fuller provenance trail.

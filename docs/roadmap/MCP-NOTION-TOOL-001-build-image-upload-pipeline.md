@@ -9,6 +9,10 @@ blocked-by: []
 baseline-ref: null
 ---
 
+## Goal
+
+Achieve the stated outcome: Build image upload pipeline.
+
 ## Context
 
 Resolve `<Note> - images/` siblings, upload each file through `POST /v1/file_uploads`, and replace alt-text placeholder paragraphs with Notion image blocks using `file_upload`.
@@ -31,11 +35,11 @@ Nothing in `src/` handles images today. The only mention of them is the "Known g
 
 ## Steps
 
-1. Settle and record the resolution rule for the `<Note> - images/` sibling directory, then add the directory-and-member confinement helper to `src/utils/paths.ts` alongside `resolveKbNotePath`, with the same lexical-plus-realpath discipline.
-2. Confirm the upload request contract against the Notion API version this repo pins (`notionApiVersion` in `src/config/index.ts`) and add the upload call to `src/main/notion-client/index.ts`, reusing the existing timeout budget, `NotionApiError` envelope, and never-log-the-token rule; the JSON-only `request` helper will need a binary-capable sibling rather than a change of shape.
-3. Detect local image references during conversion in `src/main/notes/markdown.ts` and carry them through `bodyToBlocks` as explicit placeholders, so the substitution point is a named seam rather than a post-hoc scan of martian's output — mirroring how mention placeholders are already handled.
-4. Wire resolution, upload, and placeholder substitution into the `updateNote` render path, and decide how uploaded-asset identity folds into `computeBodyHash` so an unchanged note still skips while an edited image does not.
-5. Add co-located tests using `fetch` mocks and the synthetic Greek fixture scheme, keeping the 100% coverage gate green, and document any new environment knob in `README.md`.
+- [ ] Settle and record the resolution rule for the `<Note> - images/` sibling directory, then add the directory-and-member confinement helper to `src/utils/paths.ts` alongside `resolveKbNotePath`, with the same lexical-plus-realpath discipline.
+- [ ] Confirm the upload request contract against the Notion API version this repo pins (`notionApiVersion` in `src/config/index.ts`) and add the upload call to `src/main/notion-client/index.ts`, reusing the existing timeout budget, `NotionApiError` envelope, and never-log-the-token rule; the JSON-only `request` helper will need a binary-capable sibling rather than a change of shape.
+- [ ] Detect local image references during conversion in `src/main/notes/markdown.ts` and carry them through `bodyToBlocks` as explicit placeholders, so the substitution point is a named seam rather than a post-hoc scan of martian's output — mirroring how mention placeholders are already handled.
+- [ ] Wire resolution, upload, and placeholder substitution into the `updateNote` render path, and decide how uploaded-asset identity folds into `computeBodyHash` so an unchanged note still skips while an edited image does not.
+- [ ] Add co-located tests using `fetch` mocks and the synthetic Greek fixture scheme, keeping the 100% coverage gate green, and document any new environment knob in `README.md`.
 
 ## Files touched
 
