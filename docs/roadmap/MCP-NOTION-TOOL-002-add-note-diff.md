@@ -1,6 +1,6 @@
 ---
 id: MCP-NOTION-TOOL-002
-title: Add kb_notion_mirror_note_diff
+title: Add KB note diff
 theme: tool-surface
 horizon: next
 status: open

@@ -1,6 +1,6 @@
 ---
 id: MCP-NOTION-TOOL-004
-title: Add a token-gated live integration test
+title: Add gated integration test
 theme: tool-surface
 horizon: future
 status: open
