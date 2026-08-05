@@ -3,7 +3,7 @@ id: MCP-NOTION-TOOL-001
 title: Build image upload pipeline
 theme: tool-surface
 horizon: next
-status: open
+status: draft
 blocks: []
 blocked-by: []
 baseline-ref: null

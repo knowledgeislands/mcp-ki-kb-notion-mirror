@@ -3,7 +3,7 @@ id: MCP-NOTION-TOOL-004
 title: Add gated integration test
 theme: tool-surface
 horizon: future
-status: open
+status: draft
 candidate: true
 blocks: []
 blocked-by: []
