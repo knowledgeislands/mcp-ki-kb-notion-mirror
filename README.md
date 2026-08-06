@@ -16,15 +16,15 @@ Conforms to the **MCP specification 2025-11-25**.
 
 Each resource shares one verb set (the `note`/`tree` columns show where a verb exists):
 
-| Verb        | note | tree | What it does                                                                                 |
-| ----------- | :--: | :--: | -------------------------------------------------------------------------------------------- |
-| `get`       |  ✅  |  —   | Fetch the **live** Notion page state. Pure read.                                             |
-| `status`    |  ✅  |  ✅  | Is it mirrored? (frontmatter only, no Notion call). Tree aggregates + orders.                |
-| `preflight` |  ✅  |  ✅  | Local readiness check (no Notion call). Tree adds the missing-folder-index check.            |
-| `touch`     |  ✅  |  ✅  | Create a body-less scaffold so the page URL becomes known for linking.† Idempotent.          |
-| `update`    |  ✅  |  ✅  | Push the body + resolve `[[wikilinks]]`. **Requires a prior `touch`.** URL preserved.        |
-| `move`      |  ✅  |  —   | Re-parent the page. URL/content unchanged.                                                   |
-| `delete`    |  ✅  |  ✅  | Archive the page + clear the mirror frontmatter. Destructive — `dry_run` defaults to `true`. |
+| Verb | note | tree | What it does |
+| --- | :-: | :-: | --- |
+| `get` | ✅ | — | Fetch the **live** Notion page state. Pure read. |
+| `status` | ✅ | ✅ | Is it mirrored? (frontmatter only, no Notion call). Tree aggregates + orders. |
+| `preflight` | ✅ | ✅ | Local readiness check (no Notion call). Tree adds the missing-folder-index check. |
+| `touch` | ✅ | ✅ | Create a body-less scaffold so the page URL becomes known for linking.† Idempotent. |
+| `update` | ✅ | ✅ | Push the body + resolve `[[wikilinks]]`. **Requires a prior `touch`.** URL preserved. |
+| `move` | ✅ | — | Re-parent the page. URL/content unchanged. |
+| `delete` | ✅ | ✅ | Archive the page + clear the mirror frontmatter. Destructive — `dry_run` defaults to `true`. |
 
 † The scaffold is a title + icon + banner, with no body — just enough for the page (and its URL) to exist.
 
