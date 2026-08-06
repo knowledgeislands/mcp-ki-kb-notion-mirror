@@ -24,7 +24,9 @@ describe('resolveKbNotePath (kbRoot set)', () => {
   })
 
   it('accepts an absolute path under the root', () => {
-    expect(resolveKbNotePath(kbRoot, path.join(kbRoot, 'sub', 'note.md'))).toBe(real(path.join(kbRoot, 'sub', 'note.md')))
+    expect(resolveKbNotePath(kbRoot, path.join(kbRoot, 'sub', 'note.md'))).toBe(
+      real(path.join(kbRoot, 'sub', 'note.md'))
+    )
   })
 
   it('rejects ".." segments', () => {

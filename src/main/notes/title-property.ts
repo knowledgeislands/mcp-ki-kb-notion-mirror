@@ -20,7 +20,12 @@ export const getDatabaseTitleProperty = async (cfg: NotionConfig, databaseId: st
   const db = await getDatabase(cfg, databaseId)
   const entry = Object.entries(db.properties).find(([, prop]) => prop.type === 'title')
   if (!entry) {
-    throw new NotionApiError(0, '', 'no_title_property', `Database ${databaseId} has no title property — cannot set a page title.`)
+    throw new NotionApiError(
+      0,
+      '',
+      'no_title_property',
+      `Database ${databaseId} has no title property — cannot set a page title.`
+    )
   }
   titlePropertyCache.set(databaseId, entry[0])
   return entry[0]

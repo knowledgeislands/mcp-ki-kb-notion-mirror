@@ -104,7 +104,9 @@ describe('appendAuditEvent / withAuditLog (mcp-ki-kb-notion-mirror)', () => {
   it('skips logging entirely when audit mode is "off"', async () => {
     const { withAuditLog } = await import('./audit-log.js')
     const writeHandler = vi.fn(async (_args: unknown) => ({ content: [{ type: 'text', text: 'ok' }] }))
-    expect(withAuditLog(auditCfg({ mode: 'off' }), 'kb_notion_mirror_note_touch', 'write', writeHandler)).toBe(writeHandler)
+    expect(withAuditLog(auditCfg({ mode: 'off' }), 'kb_notion_mirror_note_touch', 'write', writeHandler)).toBe(
+      writeHandler
+    )
     await writeHandler({})
     await flushAsync()
     await expect(fs.access(logPath)).rejects.toThrow()
@@ -176,9 +178,14 @@ describe('appendAuditEvent / withAuditLog (mcp-ki-kb-notion-mirror)', () => {
 
   it('discards the live log when keep=0', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog(auditCfg({ maxBytes: 64, keep: 0 }), 'kb_notion_mirror_note_touch', 'write', async () => ({
-      content: [{ type: 'text', text: 'ok' }]
-    }))
+    const wrapped = withAuditLog(
+      auditCfg({ maxBytes: 64, keep: 0 }),
+      'kb_notion_mirror_note_touch',
+      'write',
+      async () => ({
+        content: [{ type: 'text', text: 'ok' }]
+      })
+    )
     await wrapped({ kb_path: 'a.md' })
     await flushAsync()
     await wrapped({ kb_path: 'b.md' })
@@ -191,9 +198,14 @@ describe('appendAuditEvent / withAuditLog (mcp-ki-kb-notion-mirror)', () => {
     await fs.writeFile(`${logPath}.1`, 'prior-rotation\n', { mode: 0o600 })
 
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog(auditCfg({ maxBytes: 64, keep: 3 }), 'kb_notion_mirror_note_touch', 'write', async () => ({
-      content: [{ type: 'text', text: 'ok' }]
-    }))
+    const wrapped = withAuditLog(
+      auditCfg({ maxBytes: 64, keep: 3 }),
+      'kb_notion_mirror_note_touch',
+      'write',
+      async () => ({
+        content: [{ type: 'text', text: 'ok' }]
+      })
+    )
     await wrapped({ kb_path: 'a.md' })
     await flushAsync()
     await wrapped({ kb_path: 'b.md' })

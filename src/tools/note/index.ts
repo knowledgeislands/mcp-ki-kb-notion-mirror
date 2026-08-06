@@ -1,7 +1,15 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import type { Config } from '../../config/index.js'
-import { deleteNote, getNote, moveNote, preflightNote, statusNote, touchNote, updateNote } from '../../main/notes/index.js'
+import {
+  deleteNote,
+  getNote,
+  moveNote,
+  preflightNote,
+  statusNote,
+  touchNote,
+  updateNote
+} from '../../main/notes/index.js'
 import type { NotionIcon, NotionParent } from '../../main/notion-client/index.js'
 import { DESTRUCTIVE_REMOTE, READ_ONLY_REMOTE, WRITE_REMOTE_IDEMPOTENT } from '../../utils/annotations.js'
 import { parentArg } from '../../utils/notion-args.js'
@@ -23,7 +31,9 @@ const iconArg = z
     z.object({ type: z.literal('emoji'), emoji: z.string().min(1).max(64) }).strict(),
     z.object({ type: z.literal('external'), external: z.object({ url: z.string().url().max(2048) }).strict() }).strict()
   ])
-  .describe('Notion page icon, passed verbatim: { type: "emoji", emoji } or { type: "external", external: { url } }. Omit for no icon.')
+  .describe(
+    'Notion page icon, passed verbatim: { type: "emoji", emoji } or { type: "external", external: { url } }. Omit for no icon.'
+  )
 
 const linkMapArg = z
   .record(z.string().max(1024), z.string().max(2048))
@@ -35,7 +45,9 @@ const getInput = z.object({ kb_path: kbPathArg }).strict()
 const statusInput = z.object({ kb_path: kbPathArg }).strict()
 const preflightInput = z.object({ kb_path: kbPathArg }).strict()
 const touchInput = z.object({ kb_path: kbPathArg, parent: parentArg, icon: iconArg.optional() }).strict()
-const updateInput = z.object({ kb_path: kbPathArg, parent: parentArg, icon: iconArg.optional(), link_map: linkMapArg.optional() }).strict()
+const updateInput = z
+  .object({ kb_path: kbPathArg, parent: parentArg, icon: iconArg.optional(), link_map: linkMapArg.optional() })
+  .strict()
 const moveInput = z.object({ kb_path: kbPathArg, parent: parentArg }).strict()
 const deleteInput = z
   .object({
@@ -78,7 +90,12 @@ const touchNoteOutput = z.union([
 
 const updateNoteOutput = z.object({ url: z.string(), page_id: z.string(), updated_at: z.string() })
 
-const moveNoteOutput = z.object({ moved: z.literal(true), page_id: z.string(), previous_parent: notionParent, new_parent: notionParent })
+const moveNoteOutput = z.object({
+  moved: z.literal(true),
+  page_id: z.string(),
+  previous_parent: notionParent,
+  new_parent: notionParent
+})
 
 const deleteNoteOutput = z.union([
   z.object({
@@ -250,7 +267,9 @@ Side effect: when parent.type is "page_id", the parent's "Child Pages" footer is
     },
     async ({ kb_path, parent, icon }) => {
       try {
-        return jsonResult(await touchNote(cfg, kb_path, parent as NotionParent, { icon: icon as NotionIcon | undefined }))
+        return jsonResult(
+          await touchNote(cfg, kb_path, parent as NotionParent, { icon: icon as NotionIcon | undefined })
+        )
       } catch (err) {
         return errorResult('touching note', err)
       }
@@ -282,7 +301,12 @@ Errors:
     },
     async ({ kb_path, parent, icon, link_map }) => {
       try {
-        return jsonResult(await updateNote(cfg, kb_path, parent as NotionParent, { icon: icon as NotionIcon | undefined, linkMap: link_map }))
+        return jsonResult(
+          await updateNote(cfg, kb_path, parent as NotionParent, {
+            icon: icon as NotionIcon | undefined,
+            linkMap: link_map
+          })
+        )
       } catch (err) {
         return errorResult('updating note', err)
       }

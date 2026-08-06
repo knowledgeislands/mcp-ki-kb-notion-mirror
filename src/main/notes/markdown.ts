@@ -64,7 +64,8 @@ export const collapseSoftBreaks = (node: unknown): unknown => {
     const out: Record<string, unknown> = {}
     for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
       if (key === 'rich_text' && Array.isArray(value)) out[key] = collapseRichTextBreaks(value)
-      else if (key === 'cells' && Array.isArray(value)) out[key] = value.map((cell) => collapseRichTextBreaks(cell as unknown[]))
+      else if (key === 'cells' && Array.isArray(value))
+        out[key] = value.map((cell) => collapseRichTextBreaks(cell as unknown[]))
       else out[key] = collapseSoftBreaks(value)
     }
     return out

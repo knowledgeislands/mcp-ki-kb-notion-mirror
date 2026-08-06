@@ -15,10 +15,26 @@ const makeStub = () => {
 
 const gateAt = (accessLevel: AccessLevel) => {
   const { calls, stub } = makeStub()
-  const gated = makeAccessGatedRegister(stub as unknown as Parameters<typeof makeAccessGatedRegister>[0], accessLevel, AUDIT_OFF)
-  gated('kb_notion_mirror_note_get', { title: 't', description: 'd', annotations: READ_ONLY_REMOTE } as never, (async () => ({ content: [] })) as never)
-  gated('kb_notion_mirror_note_touch', { title: 't', description: 'd', annotations: WRITE_REMOTE } as never, (async () => ({ content: [] })) as never)
-  gated('kb_notion_mirror_note_delete', { title: 't', description: 'd', annotations: DESTRUCTIVE_REMOTE } as never, (async () => ({ content: [] })) as never)
+  const gated = makeAccessGatedRegister(
+    stub as unknown as Parameters<typeof makeAccessGatedRegister>[0],
+    accessLevel,
+    AUDIT_OFF
+  )
+  gated(
+    'kb_notion_mirror_note_get',
+    { title: 't', description: 'd', annotations: READ_ONLY_REMOTE } as never,
+    (async () => ({ content: [] })) as never
+  )
+  gated(
+    'kb_notion_mirror_note_touch',
+    { title: 't', description: 'd', annotations: WRITE_REMOTE } as never,
+    (async () => ({ content: [] })) as never
+  )
+  gated(
+    'kb_notion_mirror_note_delete',
+    { title: 't', description: 'd', annotations: DESTRUCTIVE_REMOTE } as never,
+    (async () => ({ content: [] })) as never
+  )
   return calls
 }
 
@@ -50,12 +66,20 @@ describe('makeAccessGatedRegister', () => {
   })
 
   it('registers every level at gate=destructive', () => {
-    expect(gateAt('destructive')).toEqual(['kb_notion_mirror_note_get', 'kb_notion_mirror_note_touch', 'kb_notion_mirror_note_delete'])
+    expect(gateAt('destructive')).toEqual([
+      'kb_notion_mirror_note_get',
+      'kb_notion_mirror_note_touch',
+      'kb_notion_mirror_note_delete'
+    ])
   })
 
   it('treats an unannotated tool as destructive (fail-safe — skipped at gate=write)', () => {
     const { calls, stub } = makeStub()
-    const gated = makeAccessGatedRegister(stub as unknown as Parameters<typeof makeAccessGatedRegister>[0], 'write', AUDIT_OFF)
+    const gated = makeAccessGatedRegister(
+      stub as unknown as Parameters<typeof makeAccessGatedRegister>[0],
+      'write',
+      AUDIT_OFF
+    )
     gated('unannotated_tool', { title: 't', description: 'd' } as never, (async () => ({ content: [] })) as never)
     expect(calls).toEqual([])
   })

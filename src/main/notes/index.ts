@@ -74,18 +74,29 @@ export interface BaselineOptions {
   publishedAt?: string
 }
 
-export type TouchResult = { url: string; page_id: string; published_at: string } | { skipped: true; existing_url: string }
+export type TouchResult =
+  | { url: string; page_id: string; published_at: string }
+  | { skipped: true; existing_url: string }
 
-export type UpdateResult = { url: string; page_id: string; updated_at: string; hash: string } | { skipped: true; url: string; page_id: string; hash: string }
+export type UpdateResult =
+  | { url: string; page_id: string; updated_at: string; hash: string }
+  | { skipped: true; url: string; page_id: string; hash: string }
 
-export type BaselineResult = { baselined: true; url: string; hash: string; published_at: string } | { skipped: true; reason: 'not-mirrored' }
+export type BaselineResult =
+  | { baselined: true; url: string; hash: string; published_at: string }
+  | { skipped: true; reason: 'not-mirrored' }
 
 export type DeleteResult =
   | { archived: true; page_id: string; url: string }
   | { dry_run: true; would_archive_url: string; would_archive_page_id: string; would_clear_fields: string[] }
   | { archived: false; reason: string }
 
-export type MoveResult = { moved: true; page_id: string; previous_parent: Record<string, unknown>; new_parent: NotionParent }
+export type MoveResult = {
+  moved: true
+  page_id: string
+  previous_parent: Record<string, unknown>
+  new_parent: NotionParent
+}
 
 export type GetResult =
   | {
@@ -104,7 +115,8 @@ export type StatusResult = { published: true; url: string; published_at: string 
 export type PreflightResult = { ok: boolean; issues: string[] }
 
 /** The page id of a Notion page parent, or undefined for a database/other parent. */
-const pageParentId = (parent: Record<string, unknown>): string | undefined => (parent.type === 'page_id' ? (parent.page_id as string) : undefined)
+const pageParentId = (parent: Record<string, unknown>): string | undefined =>
+  parent.type === 'page_id' ? (parent.page_id as string) : undefined
 
 /**
  * Refresh a parent's child-pages footer without ever failing the primary op —
@@ -154,7 +166,12 @@ const replaceBody = async (cfg: Config, pageId: string, children: unknown[]): Pr
  * `kb_notion_mirror_url` it is left untouched and reported as skipped. Creating a
  * child under a page parent refreshes that parent's child-pages footer.
  */
-export const touchNote = async (cfg: Config, kbPath: string, parent: NotionParent, options: TouchOptions = {}): Promise<TouchResult> => {
+export const touchNote = async (
+  cfg: Config,
+  kbPath: string,
+  parent: NotionParent,
+  options: TouchOptions = {}
+): Promise<TouchResult> => {
   const { abs, raw, fields, hasFrontmatter } = await readNoteFrontmatter(cfg, kbPath)
   if (!hasFrontmatter) throw new Error('Note has no YAML frontmatter; refusing to mirror.')
 
@@ -164,11 +181,15 @@ export const touchNote = async (cfg: Config, kbPath: string, parent: NotionParen
   const title = titleFromPath(abs)
   const banner = bannerBlock(cfg.bannerTemplate, new Date().toISOString().slice(0, 10))
   const children = banner ? [banner] : []
-  const titleProperty = parent.type === 'database_id' ? await getDatabaseTitleProperty(cfg, parent.database_id) : undefined
+  const titleProperty =
+    parent.type === 'database_id' ? await getDatabaseTitleProperty(cfg, parent.database_id) : undefined
 
   const page = await createPage(cfg, { parent, title, children, titleProperty, icon: options.icon })
   const publishedAt = normalizePublishedAt(page.created_time)
-  await atomicWriteFile(abs, upsertFrontmatterFields(raw, { kb_notion_mirror_url: page.url, kb_notion_mirror_published_at: publishedAt }))
+  await atomicWriteFile(
+    abs,
+    upsertFrontmatterFields(raw, { kb_notion_mirror_url: page.url, kb_notion_mirror_published_at: publishedAt })
+  )
 
   // A new child page lands in its page parent; refresh that parent's footer.
   // Database parents need none — the database's views already list their rows.
@@ -183,7 +204,12 @@ export const touchNote = async (cfg: Config, kbPath: string, parent: NotionParen
  * note to already be mirrored (touched) — throws otherwise, so a caller can't
  * render a body whose forward-link targets don't yet exist.
  */
-export const updateNote = async (cfg: Config, kbPath: string, parent: NotionParent, options: UpdateOptions = {}): Promise<UpdateResult> => {
+export const updateNote = async (
+  cfg: Config,
+  kbPath: string,
+  parent: NotionParent,
+  options: UpdateOptions = {}
+): Promise<UpdateResult> => {
   const { abs, raw, fields, hasFrontmatter, body } = await readFullNote(cfg, kbPath)
   if (!hasFrontmatter) throw new Error('Note has no YAML frontmatter; refusing to mirror.')
 
@@ -202,12 +228,14 @@ export const updateNote = async (cfg: Config, kbPath: string, parent: NotionPare
   // parent) has changed since the last mirror, don't touch Notion at all.
   // `force` bypasses this (manual --force, or a drift reconcile).
   const hash = computeBodyHash({ blocks: bodyBlocks, title, icon: options.icon, parent })
-  if (!options.force && fields.kb_notion_mirror_hash === hash) return { skipped: true, url: existing, page_id: pageId, hash }
+  if (!options.force && fields.kb_notion_mirror_hash === hash)
+    return { skipped: true, url: existing, page_id: pageId, hash }
 
   const banner = bannerBlock(cfg.bannerTemplate, new Date().toISOString().slice(0, 10))
   const children = banner ? [banner, ...bodyBlocks] : bodyBlocks
 
-  const titleProperty = parent.type === 'database_id' ? await getDatabaseTitleProperty(cfg, parent.database_id) : undefined
+  const titleProperty =
+    parent.type === 'database_id' ? await getDatabaseTitleProperty(cfg, parent.database_id) : undefined
   // Read parent before updatePage so we can detect the page_id ↔ database_id
   // silent-failure case Notion exhibits on cross-type re-parents.
   const before = await getPage(cfg, pageId)
@@ -226,13 +254,17 @@ export const updateNote = async (cfg: Config, kbPath: string, parent: NotionPare
   // new parent's footer if the new parent is a page.
   await refreshFooterSafe(cfg, pageId)
   const oldParentId = pageParentId(before.parent)
-  if (oldParentId && oldParentId !== (parent.type === 'page_id' ? parent.page_id : undefined)) await refreshFooterSafe(cfg, oldParentId)
+  if (oldParentId && oldParentId !== (parent.type === 'page_id' ? parent.page_id : undefined))
+    await refreshFooterSafe(cfg, oldParentId)
   if (parent.type === 'page_id') await refreshFooterSafe(cfg, parent.page_id)
   // Stamp `published_at` from a FINAL read — after the body + footer writes — so
   // it is >= the page's true last edit; otherwise every page would later look
   // drifted to `--verify`. Stamp the content `hash` so the next run can skip.
   const updatedAt = normalizePublishedAt((await getPage(cfg, pageId)).last_edited_time)
-  await atomicWriteFile(abs, upsertFrontmatterFields(raw, { kb_notion_mirror_hash: hash, kb_notion_mirror_published_at: updatedAt }))
+  await atomicWriteFile(
+    abs,
+    upsertFrontmatterFields(raw, { kb_notion_mirror_hash: hash, kb_notion_mirror_published_at: updatedAt })
+  )
   return { url: existing, page_id: pageId, updated_at: updatedAt, hash }
 }
 
@@ -243,7 +275,12 @@ export const updateNote = async (cfg: Config, kbPath: string, parent: NotionPare
  * reflect the note (e.g. straight after a full publish) — it asserts "this is the
  * synced state" so subsequent publishes skip it. Unmirrored notes are left alone.
  */
-export const baselineNote = async (cfg: Config, kbPath: string, parent: NotionParent, options: BaselineOptions = {}): Promise<BaselineResult> => {
+export const baselineNote = async (
+  cfg: Config,
+  kbPath: string,
+  parent: NotionParent,
+  options: BaselineOptions = {}
+): Promise<BaselineResult> => {
   const { abs, raw, fields, hasFrontmatter, body } = await readFullNote(cfg, kbPath)
   if (!hasFrontmatter) throw new Error('Note has no YAML frontmatter; refusing to mirror.')
 
@@ -255,7 +292,10 @@ export const baselineNote = async (cfg: Config, kbPath: string, parent: NotionPa
   const bodyBlocks = convertMentionPlaceholders(bodyToBlocks(rewritten)) as unknown[]
   const hash = computeBodyHash({ blocks: bodyBlocks, title, icon: options.icon, parent })
   const publishedAt = options.publishedAt ?? normalizePublishedAt(new Date().toISOString())
-  await atomicWriteFile(abs, upsertFrontmatterFields(raw, { kb_notion_mirror_hash: hash, kb_notion_mirror_published_at: publishedAt }))
+  await atomicWriteFile(
+    abs,
+    upsertFrontmatterFields(raw, { kb_notion_mirror_hash: hash, kb_notion_mirror_published_at: publishedAt })
+  )
   return { baselined: true, url: existing, hash, published_at: publishedAt }
 }
 
@@ -268,7 +308,12 @@ export const deleteNote = async (cfg: Config, kbPath: string, dryRun: boolean): 
   if (!pageId) throw new Error(`Could not extract a 32-hex page id from kb_notion_mirror_url: ${mirror}`)
 
   if (dryRun) {
-    return { dry_run: true, would_archive_url: mirror, would_archive_page_id: pageId, would_clear_fields: [...MIRROR_FIELDS] }
+    return {
+      dry_run: true,
+      would_archive_url: mirror,
+      would_archive_page_id: pageId,
+      would_clear_fields: [...MIRROR_FIELDS]
+    }
   }
 
   // Learn the parent before archiving so we can refresh its footer afterwards.
@@ -300,7 +345,9 @@ export const moveNote = async (cfg: Config, kbPath: string, parent: NotionParent
   if (before.parent.type !== parent.type) {
     const after = await getPage(cfg, pageId)
     if (JSON.stringify(after.parent) === JSON.stringify(before.parent)) {
-      throw new Error('Notion silently ignored the parent change — cannot move between page-id and database-id parents. Use delete + touch instead.')
+      throw new Error(
+        'Notion silently ignored the parent change — cannot move between page-id and database-id parents. Use delete + touch instead.'
+      )
     }
   }
 

@@ -5,7 +5,8 @@ import { loadConfig, loadKbRoot, loadMirrorSettings } from './index.js'
 
 // loadConfig reads from the env object it's given, so tests pass explicit envs
 // (no process.env mutation, no module-reset dance).
-const load = (extra: Record<string, string> = {}) => loadConfig({ MCP_KI_KB_NOTION_MIRROR_TOKEN: 'ntn_placeholder', ...extra })
+const load = (extra: Record<string, string> = {}) =>
+  loadConfig({ MCP_KI_KB_NOTION_MIRROR_TOKEN: 'ntn_placeholder', ...extra })
 
 describe('loadConfig', () => {
   describe('notionToken', () => {
@@ -18,7 +19,9 @@ describe('loadConfig', () => {
     })
 
     it('throws when blank', () => {
-      expect(() => loadConfig({ MCP_KI_KB_NOTION_MIRROR_TOKEN: '   ' })).toThrow(/MCP_KI_KB_NOTION_MIRROR_TOKEN is required/)
+      expect(() => loadConfig({ MCP_KI_KB_NOTION_MIRROR_TOKEN: '   ' })).toThrow(
+        /MCP_KI_KB_NOTION_MIRROR_TOKEN is required/
+      )
     })
   })
 
@@ -28,7 +31,9 @@ describe('loadConfig', () => {
     })
 
     it('respects the override and strips trailing slashes', () => {
-      expect(load({ MCP_KI_KB_NOTION_MIRROR_API_BASE_URL: 'https://example.test///' }).notionApiBaseUrl).toBe('https://example.test')
+      expect(load({ MCP_KI_KB_NOTION_MIRROR_API_BASE_URL: 'https://example.test///' }).notionApiBaseUrl).toBe(
+        'https://example.test'
+      )
     })
 
     it('rejects a non-HTTPS base URL (SSRF/plaintext-downgrade discipline)', () => {
@@ -116,7 +121,9 @@ describe('loadConfig', () => {
     })
 
     it('throws on an unknown value', () => {
-      expect(() => load({ MCP_KI_KB_NOTION_MIRROR_ACCESS_LEVEL: 'admin' })).toThrow(/Invalid MCP_KI_KB_NOTION_MIRROR_ACCESS_LEVEL="admin"/)
+      expect(() => load({ MCP_KI_KB_NOTION_MIRROR_ACCESS_LEVEL: 'admin' })).toThrow(
+        /Invalid MCP_KI_KB_NOTION_MIRROR_ACCESS_LEVEL="admin"/
+      )
     })
   })
 
@@ -134,13 +141,17 @@ describe('loadConfig', () => {
     })
 
     it('throws on an unknown value', () => {
-      expect(() => load({ MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG: 'sometimes' })).toThrow(/Invalid MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG/)
+      expect(() => load({ MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG: 'sometimes' })).toThrow(
+        /Invalid MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG/
+      )
     })
   })
 
   describe('auditLogPath', () => {
     it('defaults to ~/.local/state/mcp-ki-kb-notion-mirror/audit.jsonl', () => {
-      expect(load().auditLogPath).toBe(path.join(os.homedir(), '.local', 'state', 'mcp-ki-kb-notion-mirror', 'audit.jsonl'))
+      expect(load().auditLogPath).toBe(
+        path.join(os.homedir(), '.local', 'state', 'mcp-ki-kb-notion-mirror', 'audit.jsonl')
+      )
     })
 
     it('expands a bare ~ in the override', () => {
@@ -148,7 +159,9 @@ describe('loadConfig', () => {
     })
 
     it('expands ~/foo in the override', () => {
-      expect(load({ MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_PATH: '~/foo/audit.jsonl' }).auditLogPath).toBe(path.join(os.homedir(), 'foo', 'audit.jsonl'))
+      expect(load({ MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_PATH: '~/foo/audit.jsonl' }).auditLogPath).toBe(
+        path.join(os.homedir(), 'foo', 'audit.jsonl')
+      )
     })
 
     it('passes absolute paths through unchanged', () => {
@@ -164,23 +177,33 @@ describe('loadConfig', () => {
     })
 
     it('use defaults when blank', () => {
-      const cfg = load({ MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES: '  ', MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_KEEP: '  ' })
+      const cfg = load({
+        MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES: '  ',
+        MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_KEEP: '  '
+      })
       expect(cfg.auditLogMaxBytes).toBe(10 * 1024 * 1024)
       expect(cfg.auditLogKeep).toBe(5)
     })
 
     it('accept non-negative ints', () => {
-      const cfg = load({ MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES: '0', MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_KEEP: '3' })
+      const cfg = load({
+        MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES: '0',
+        MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_KEEP: '3'
+      })
       expect(cfg.auditLogMaxBytes).toBe(0)
       expect(cfg.auditLogKeep).toBe(3)
     })
 
     it('throws on a negative value', () => {
-      expect(() => load({ MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES: '-1' })).toThrow(/MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES/)
+      expect(() => load({ MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES: '-1' })).toThrow(
+        /MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES/
+      )
     })
 
     it('throws on a non-numeric value', () => {
-      expect(() => load({ MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_KEEP: 'lots' })).toThrow(/MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_KEEP/)
+      expect(() => load({ MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_KEEP: 'lots' })).toThrow(
+        /MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_KEEP/
+      )
     })
   })
 })
@@ -207,7 +230,10 @@ describe('loadMirrorSettings', () => {
   })
 
   it('falls back to defaults on blank env values', () => {
-    const s = loadMirrorSettings({ MCP_KI_KB_NOTION_MIRROR_SKIP_PREFIXES: '   ', MCP_KI_KB_NOTION_MIRROR_SKIP_PATHS: '' })
+    const s = loadMirrorSettings({
+      MCP_KI_KB_NOTION_MIRROR_SKIP_PREFIXES: '   ',
+      MCP_KI_KB_NOTION_MIRROR_SKIP_PATHS: ''
+    })
     expect(s.skipPrefixes).toEqual(['+'])
     expect([...s.skipKbPaths]).toEqual([])
   })

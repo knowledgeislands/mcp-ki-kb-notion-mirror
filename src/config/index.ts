@@ -41,7 +41,8 @@ const hydrateEnvFromFiles = (): void => {
   }
 }
 
-const expandHome = (p: string): string => (p === '~' ? os.homedir() : p.startsWith('~/') ? path.join(os.homedir(), p.slice(2)) : p)
+const expandHome = (p: string): string =>
+  p === '~' ? os.homedir() : p.startsWith('~/') ? path.join(os.homedir(), p.slice(2)) : p
 
 export type AccessLevel = 'read' | 'write' | 'destructive'
 export const ACCESS_LEVELS: readonly AccessLevel[] = ['read', 'write', 'destructive'] as const
@@ -145,7 +146,10 @@ const splitCsv = (raw: string | undefined, fallback: string[]): string[] => {
 export const loadMirrorSettings = (env: NodeJS.ProcessEnv = process.env): MirrorSettings => ({
   skipPrefixes: splitCsv(env.MCP_KI_KB_NOTION_MIRROR_SKIP_PREFIXES, ['+']),
   skipKbPaths: new Set(splitCsv(env.MCP_KI_KB_NOTION_MIRROR_SKIP_PATHS, [])),
-  iconBaseUrl: (env.MCP_KI_KB_NOTION_MIRROR_ICON_BASE_URL ?? 'https://unpkg.com/lucide-static@latest/icons').replace(/\/+$/, '')
+  iconBaseUrl: (env.MCP_KI_KB_NOTION_MIRROR_ICON_BASE_URL ?? 'https://unpkg.com/lucide-static@latest/icons').replace(
+    /\/+$/,
+    ''
+  )
 })
 
 /**
@@ -157,7 +161,8 @@ export const loadMirrorSettings = (env: NodeJS.ProcessEnv = process.env): Mirror
  * just this one var without requiring the Notion token that full `loadConfig`
  * demands — env is still read only here, inside config/.
  */
-export const loadKbRoot = (env: NodeJS.ProcessEnv = process.env): string | undefined => resolveKbRoot(env.MCP_KI_KB_NOTION_MIRROR_KB_ROOT)
+export const loadKbRoot = (env: NodeJS.ProcessEnv = process.env): string | undefined =>
+  resolveKbRoot(env.MCP_KI_KB_NOTION_MIRROR_KB_ROOT)
 
 /**
  * Resolve + validate the Notion API base URL. SSRF discipline (standard §6 /
@@ -205,9 +210,20 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): Config => {
     accessLevel: parseAccessLevel(env.MCP_KI_KB_NOTION_MIRROR_ACCESS_LEVEL),
     auditLogMode: parseAuditLogMode(env.MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG),
     auditLogPath: path.resolve(
-      expandHome(env.MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_PATH ?? path.join(os.homedir(), '.local', 'state', 'mcp-ki-kb-notion-mirror', 'audit.jsonl'))
+      expandHome(
+        env.MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_PATH ??
+          path.join(os.homedir(), '.local', 'state', 'mcp-ki-kb-notion-mirror', 'audit.jsonl')
+      )
     ),
-    auditLogMaxBytes: parseNonNegativeInt(env.MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES, 10 * 1024 * 1024, 'MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES'),
-    auditLogKeep: parseNonNegativeInt(env.MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_KEEP, 5, 'MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_KEEP')
+    auditLogMaxBytes: parseNonNegativeInt(
+      env.MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES,
+      10 * 1024 * 1024,
+      'MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_MAX_BYTES'
+    ),
+    auditLogKeep: parseNonNegativeInt(
+      env.MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_KEEP,
+      5,
+      'MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_KEEP'
+    )
   }
 }

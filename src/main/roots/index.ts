@@ -22,7 +22,15 @@
 import { existsSync, readdirSync } from 'node:fs'
 import { basename, join, relative } from 'node:path'
 import type { NotionParent } from '../notion-client/index.js'
-import { buildLinkMap, discover, isEligible, isUnwalkableDir, loadNote, MAX_WALK_DEPTH, type Note } from '../trees/discover.js'
+import {
+  buildLinkMap,
+  discover,
+  isEligible,
+  isUnwalkableDir,
+  loadNote,
+  MAX_WALK_DEPTH,
+  type Note
+} from '../trees/discover.js'
 import type { MirrorSettings } from '../trees/settings.js'
 
 /** A folder declared as a mirror root via `kb_notion_mirror_root` frontmatter. */
@@ -73,7 +81,10 @@ export const discoverRoots = (kbRoot: string, s: MirrorSettings): MirrorRoot[] =
         if (!isEligible(idx, s)) continue // excluded / skip-listed index → prune this branch
         const value = rootValueOf(idx)
         if (value) {
-          if (value === 'true') throw new Error(`kb_notion_mirror_root on ${idx.kbPath} must be the Notion parent id (a wiki database id), not "true"`)
+          if (value === 'true')
+            throw new Error(
+              `kb_notion_mirror_root on ${idx.kbPath} must be the Notion parent id (a wiki database id), not "true"`
+            )
           roots.push({ subtree: relative(kbRoot, folder), indexKbPath: idx.kbPath, parent: parseRootParent(value) })
           continue // PRUNE — a root cannot nest a root
         }

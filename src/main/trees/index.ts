@@ -20,7 +20,16 @@ import type { Config } from '../../config/index.js'
 import { baselineNote, deleteNote, touchNote, updateNote } from '../notes/index.js'
 import { extractPageIdFromUrl, getPage, type NotionParent } from '../notion-client/index.js'
 import { buildGlobalLinkMap } from '../roots/index.js'
-import { buildLinkMap, discover, iconFor, indexKbPathFor, type Note, publishOrder, readFrontmatter, resolveParent } from './discover.js'
+import {
+  buildLinkMap,
+  discover,
+  iconFor,
+  indexKbPathFor,
+  type Note,
+  publishOrder,
+  readFrontmatter,
+  resolveParent
+} from './discover.js'
 import type { MirrorSettings } from './settings.js'
 
 /** The outcome of acting on a single note during a tree op. */
@@ -175,7 +184,11 @@ export const DRIFT_GRACE_MS = 120_000
  * clock and Notion's. No `publishedAt` (never mirrored/baselined) or an
  * unparseable timestamp → can't tell → treated as not drifted.
  */
-export const hasDrifted = (publishedAt: string | undefined, lastEditedTime: string, graceMs = DRIFT_GRACE_MS): boolean => {
+export const hasDrifted = (
+  publishedAt: string | undefined,
+  lastEditedTime: string,
+  graceMs = DRIFT_GRACE_MS
+): boolean => {
   if (!publishedAt) return false
   const pub = Date.parse(publishedAt)
   const edited = Date.parse(lastEditedTime)
@@ -286,9 +299,17 @@ export const baselineTree = async (
       continue
     }
     try {
-      const res = await baselineNote(cfg, n.kbPath, resolved, { icon: iconFor(n.fields.icon, s), linkMap, publishedAt: opts.publishedAt })
+      const res = await baselineNote(cfg, n.kbPath, resolved, {
+        icon: iconFor(n.fields.icon, s),
+        linkMap,
+        publishedAt: opts.publishedAt
+      })
       // `skipped` → not mirrored yet (no URL), so there is nothing to baseline.
-      outcomes.push({ kbPath: n.kbPath, action: 'skipped' in res ? 'skip' : 'baseline', url: 'baselined' in res ? res.url : undefined })
+      outcomes.push({
+        kbPath: n.kbPath,
+        action: 'skipped' in res ? 'skip' : 'baseline',
+        url: 'baselined' in res ? res.url : undefined
+      })
     } catch (err) {
       outcomes.push({ kbPath: n.kbPath, action: 'error', error: (err as Error).message })
     }
@@ -301,7 +322,12 @@ export const baselineTree = async (
  * before parents. `dryRun` (default true at the tool boundary) reports what
  * would be archived without calling Notion or editing notes.
  */
-export const deleteTree = async (cfg: Config, subtree: string, s: MirrorSettings, opts: { kbPath?: string; dryRun: boolean }): Promise<TreeResult> => {
+export const deleteTree = async (
+  cfg: Config,
+  subtree: string,
+  s: MirrorSettings,
+  opts: { kbPath?: string; dryRun: boolean }
+): Promise<TreeResult> => {
   const kbRoot = requireRoot(cfg)
   const notes = [...notesFor(kbRoot, subtree, s, opts.kbPath)].reverse()
   const outcomes: NoteOutcome[] = []
@@ -319,7 +345,13 @@ export const deleteTree = async (cfg: Config, subtree: string, s: MirrorSettings
 }
 
 /** Touch then update one note's ancestor chain in a subtree (single-note convenience for the CLI). */
-export const publishTreeNote = async (cfg: Config, subtree: string, parent: NotionParent, s: MirrorSettings, kbPath: string): Promise<TreeOneResult> => {
+export const publishTreeNote = async (
+  cfg: Config,
+  subtree: string,
+  parent: NotionParent,
+  s: MirrorSettings,
+  kbPath: string
+): Promise<TreeOneResult> => {
   const touched = await touchTree(cfg, subtree, parent, s, kbPath)
   const updated = await updateTree(cfg, subtree, parent, s, { kbPath })
   return { chain: touched.outcomes.map((o) => o.kbPath), outcomes: [...touched.outcomes, ...updated.outcomes] }

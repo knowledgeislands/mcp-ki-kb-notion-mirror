@@ -15,7 +15,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { type Config, DEFAULT_BANNER_TEMPLATE } from '../../config/index.js'
 import { _clearTitlePropertyCache } from '../notes/title-property.js'
 import type { NotionParent } from '../notion-client/index.js'
-import { baselineTree, deleteTree, hasDrifted, preflightTree, publishTreeNote, statusTree, touchTree, updateTree } from './index.js'
+import {
+  baselineTree,
+  deleteTree,
+  hasDrifted,
+  preflightTree,
+  publishTreeNote,
+  statusTree,
+  touchTree,
+  updateTree
+} from './index.js'
 import type { MirrorSettings } from './settings.js'
 
 const DB_ID = '36f9f7187cc280f69272e60aa89bff24'
@@ -154,7 +163,9 @@ describe('tree verbs', () => {
 
   describe('touchTree', () => {
     it('throws when kbRoot is unset', async () => {
-      await expect(touchTree({ ...cfg, kbRoot: undefined }, SUBTREE, ROOT_PARENT, s)).rejects.toThrow(/MCP_KI_KB_NOTION_MIRROR_KB_ROOT must be set/)
+      await expect(touchTree({ ...cfg, kbRoot: undefined }, SUBTREE, ROOT_PARENT, s)).rejects.toThrow(
+        /MCP_KI_KB_NOTION_MIRROR_KB_ROOT must be set/
+      )
     })
 
     it('scaffolds every note and writes URLs back', async () => {
@@ -222,7 +233,9 @@ describe('tree verbs', () => {
       await write('Alpha/Alpha.md', fm({}))
       routeHappy()
       await touchTree(cfg, SUBTREE, ROOT_PARENT, s)
-      const res = await updateTree(cfg, SUBTREE, ROOT_PARENT, s, { linkMap: { Other: `https://www.notion.so/O-${'b'.repeat(32)}` } })
+      const res = await updateTree(cfg, SUBTREE, ROOT_PARENT, s, {
+        linkMap: { Other: `https://www.notion.so/O-${'b'.repeat(32)}` }
+      })
       expect(res.outcomes[0]).toMatchObject({ action: 'update' })
     })
 
@@ -284,7 +297,11 @@ describe('tree verbs', () => {
       // live last_edited == stored published_at → not drifted → hash skip
       expect(res.outcomes.map((o) => o.action)).toEqual(['skip'])
       // but the drift READ did happen
-      expect(fetchMock.mock.calls.some((c) => /\/v1\/pages\/[a-f0-9]{32}$/.test(String(c[0])) && (c[1]?.method ?? 'GET') === 'GET')).toBe(true)
+      expect(
+        fetchMock.mock.calls.some(
+          (c) => /\/v1\/pages\/[a-f0-9]{32}$/.test(String(c[0])) && (c[1]?.method ?? 'GET') === 'GET'
+        )
+      ).toBe(true)
     })
 
     it('verify force re-pushes a page Notion edited after the last mirror (drift)', async () => {
@@ -298,8 +315,13 @@ describe('tree verbs', () => {
         if (url.includes('/v1/databases/')) return ok(DB_RESPONSE)
         const m = url.match(/\/v1\/pages\/([a-f0-9]{32})$/)
         if (m && (method === 'GET' || method === 'PATCH'))
-          return ok({ ...pageResponse(m[1] as string), last_edited_time: '2026-05-30T05:00:00.000Z', parent: ROOT_PARENT })
-        if (url.includes('/children') && method === 'GET') return ok({ results: [], has_more: false, next_cursor: null })
+          return ok({
+            ...pageResponse(m[1] as string),
+            last_edited_time: '2026-05-30T05:00:00.000Z',
+            parent: ROOT_PARENT
+          })
+        if (url.includes('/children') && method === 'GET')
+          return ok({ results: [], has_more: false, next_cursor: null })
         return ok({ results: [{ id: 'x' }] })
       })
       const res = await updateTree(cfg, SUBTREE, ROOT_PARENT, s, { verify: true })

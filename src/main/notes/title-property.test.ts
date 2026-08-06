@@ -3,7 +3,11 @@ import type { NotionConfig } from '../notion-client/index.js'
 import { _clearTitlePropertyCache, getDatabaseTitleProperty } from './title-property.js'
 
 const DB_ID = '36f9f7187cc280f69272e60aa89bff24'
-const cfg: NotionConfig = { notionToken: 'ntn_secrettoken', notionApiBaseUrl: 'https://api.notion.test', notionApiVersion: '2022-06-28' }
+const cfg: NotionConfig = {
+  notionToken: 'ntn_secrettoken',
+  notionApiBaseUrl: 'https://api.notion.test',
+  notionApiVersion: '2022-06-28'
+}
 const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200 })
 
 describe('title-property', () => {
@@ -20,7 +24,9 @@ describe('title-property', () => {
   })
 
   it('returns the name of the title-typed property', async () => {
-    fetchMock.mockResolvedValueOnce(ok({ properties: { Tags: { id: 't', type: 'multi_select' }, Page: { id: 'p', type: 'title' } } }))
+    fetchMock.mockResolvedValueOnce(
+      ok({ properties: { Tags: { id: 't', type: 'multi_select' }, Page: { id: 'p', type: 'title' } } })
+    )
     expect(await getDatabaseTitleProperty(cfg, DB_ID)).toBe('Page')
     expect(fetchMock.mock.calls[0]?.[0]).toBe(`https://api.notion.test/v1/databases/${DB_ID}`)
   })

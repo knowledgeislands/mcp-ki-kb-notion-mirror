@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { convertMentionPlaceholders, rewriteWikilinks } from './wikilinks.js'
 
 const HEX = '3709f7187cc2814e8652f99fd36857ff'
-const MAP = { 'Product Delivery': `https://www.notion.so/Product-Delivery-${HEX}`, 'Docs/Guide': `https://www.notion.so/${HEX}?pvs=4` }
+const MAP = {
+  'Product Delivery': `https://www.notion.so/Product-Delivery-${HEX}`,
+  'Docs/Guide': `https://www.notion.so/${HEX}?pvs=4`
+}
 
 describe('rewriteWikilinks', () => {
   it('rewrites a resolved [[target]] to a mention placeholder link using the basename as text', () => {
@@ -43,9 +46,17 @@ describe('convertMentionPlaceholders', () => {
   const para = (rich: unknown[]) => ({ object: 'block', type: 'paragraph', paragraph: { rich_text: rich } })
 
   it('converts a text element whose link is a mention: placeholder into a page mention', () => {
-    const blocks = [para([{ type: 'text', text: { content: 'Delivery', link: { type: 'url', url: `mention:${HEX}` } } }])]
-    const out = convertMentionPlaceholders(blocks) as Array<{ paragraph: { rich_text: Array<Record<string, unknown>> } }>
-    expect(out[0].paragraph.rich_text[0]).toEqual({ type: 'mention', mention: { type: 'page', page: { id: HEX } }, plain_text: 'Delivery' })
+    const blocks = [
+      para([{ type: 'text', text: { content: 'Delivery', link: { type: 'url', url: `mention:${HEX}` } } }])
+    ]
+    const out = convertMentionPlaceholders(blocks) as Array<{
+      paragraph: { rich_text: Array<Record<string, unknown>> }
+    }>
+    expect(out[0].paragraph.rich_text[0]).toEqual({
+      type: 'mention',
+      mention: { type: 'page', page: { id: HEX } },
+      plain_text: 'Delivery'
+    })
   })
 
   it('leaves ordinary text and real links untouched', () => {
@@ -93,10 +104,15 @@ describe('convertMentionPlaceholders', () => {
       object: 'block',
       type: 'table_row',
       table_row: {
-        cells: [[{ type: 'text', text: { content: 'Auth' } }], [{ type: 'text', text: { content: 'ADR-AUTH', link: { url: `mention:${HEX}` } } }]]
+        cells: [
+          [{ type: 'text', text: { content: 'Auth' } }],
+          [{ type: 'text', text: { content: 'ADR-AUTH', link: { url: `mention:${HEX}` } } }]
+        ]
       }
     }
-    const out = convertMentionPlaceholders([row]) as Array<{ table_row: { cells: Array<Array<Record<string, unknown>>> } }>
+    const out = convertMentionPlaceholders([row]) as Array<{
+      table_row: { cells: Array<Array<Record<string, unknown>>> }
+    }>
     expect(out[0].table_row.cells[0]?.[0]).toEqual({ type: 'text', text: { content: 'Auth' } })
     expect(out[0].table_row.cells[1]?.[0]).toEqual({
       type: 'mention',

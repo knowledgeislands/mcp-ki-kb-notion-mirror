@@ -46,8 +46,10 @@ describe('markdown helpers', () => {
       expect(bodyToBlocks('')).toEqual([])
     })
 
-    const contentOf = (block: { [k: string]: { rich_text?: Array<{ text?: { content?: string } }> } }, type: string): string =>
-      (block[type]?.rich_text ?? []).map((r) => r.text?.content ?? '').join('')
+    const contentOf = (
+      block: { [k: string]: { rich_text?: Array<{ text?: { content?: string } }> } },
+      type: string
+    ): string => (block[type]?.rich_text ?? []).map((r) => r.text?.content ?? '').join('')
 
     it('folds a hard-wrapped paragraph back into one line', () => {
       const blocks = bodyToBlocks('This paragraph was hard wrapped\nacross three\nsource lines.') as Array<{
@@ -59,7 +61,10 @@ describe('markdown helpers', () => {
     })
 
     it('folds wrapped list items but keeps item boundaries', () => {
-      const blocks = bodyToBlocks('- first item that\n  wraps a line\n- second item') as Array<{ type: string; [k: string]: unknown }>
+      const blocks = bodyToBlocks('- first item that\n  wraps a line\n- second item') as Array<{
+        type: string
+        [k: string]: unknown
+      }>
       const items = blocks.filter((b) => b.type === 'bulleted_list_item') as never[]
       expect(contentOf(items[0], 'bulleted_list_item')).toBe('first item that wraps a line')
       expect(contentOf(items[1], 'bulleted_list_item')).toBe('second item')
@@ -78,7 +83,9 @@ describe('markdown helpers', () => {
         (b): b is { type: string; table: { children: TableRow[] } } => (b as { type?: string }).type === 'table'
       )
       const cellText = (rows: TableRow[] | undefined): string[][] =>
-        (rows ?? []).map((r) => (r.table_row?.cells ?? []).map((cell) => cell.map((run) => run.text?.content ?? '').join('')))
+        (rows ?? []).map((r) =>
+          (r.table_row?.cells ?? []).map((cell) => cell.map((run) => run.text?.content ?? '').join(''))
+        )
       // The `cells` branch of collapseSoftBreaks ran on every row (header + body),
       // leaving cell content intact.
       expect(cellText(table?.table.children)).toEqual([

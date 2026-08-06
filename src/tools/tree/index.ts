@@ -25,7 +25,9 @@ const kbPathArg = z
   .min(1)
   .max(4096)
   .refine(noParentSegment, 'kb_path must not contain ".." segments')
-  .describe('Optional single note (kb-relative) to act on, walking up its ancestor indexes. Omit to act on the whole subtree.')
+  .describe(
+    'Optional single note (kb-relative) to act on, walking up its ancestor indexes. Omit to act on the whole subtree.'
+  )
 
 const linkMapArg = z
   .record(z.string().max(1024), z.string().max(2048))
@@ -36,18 +38,26 @@ const linkMapArg = z
 const statusInput = z.object({ subtree: subtreeArg }).strict()
 const preflightInput = z.object({ subtree: subtreeArg }).strict()
 const touchInput = z.object({ subtree: subtreeArg, parent: parentArg, kb_path: kbPathArg.optional() }).strict()
-const updateInput = z.object({ subtree: subtreeArg, parent: parentArg, kb_path: kbPathArg.optional(), link_map: linkMapArg.optional() }).strict()
+const updateInput = z
+  .object({ subtree: subtreeArg, parent: parentArg, kb_path: kbPathArg.optional(), link_map: linkMapArg.optional() })
+  .strict()
 const deleteInput = z
   .object({
     subtree: subtreeArg,
     kb_path: kbPathArg.optional(),
-    dry_run: z.boolean().default(true).describe('When true (default) report what would be archived without calling Notion or editing notes.')
+    dry_run: z
+      .boolean()
+      .default(true)
+      .describe('When true (default) report what would be archived without calling Notion or editing notes.')
   })
   .strict()
 const pruneInput = z
   .object({
     subtree: subtreeArg,
-    dry_run: z.boolean().default(true).describe('When true (default) report which orphaned pages would be archived without calling Notion.')
+    dry_run: z
+      .boolean()
+      .default(true)
+      .describe('When true (default) report which orphaned pages would be archived without calling Notion.')
   })
   .strict()
 
@@ -235,7 +245,9 @@ Returns: { eligible, outcomes: NoteOutcome[] } where NoteOutcome = { kbPath, act
         const kbRoot = requireKbRoot(cfg)
         resolveKbNotePath(kbRoot, subtree)
         if (kb_path !== undefined) resolveKbNotePath(kbRoot, kb_path)
-        return jsonResult(await updateTree(cfg, subtree, parent as NotionParent, settings, { kbPath: kb_path, linkMap: link_map }))
+        return jsonResult(
+          await updateTree(cfg, subtree, parent as NotionParent, settings, { kbPath: kb_path, linkMap: link_map })
+        )
       } catch (err) {
         return errorResult('updating subtree', err)
       }

@@ -120,9 +120,15 @@ describe('discoverRoots', () => {
 
   describe('buildGlobalLinkMap', () => {
     it('spans every declared root so cross-root links resolve', async () => {
-      await write('Alpha/Alpha.md', fm({ kb_notion_mirror_root: DB_ID, kb_notion_mirror_url: 'https://notion.so/alpha-aaaa' }))
+      await write(
+        'Alpha/Alpha.md',
+        fm({ kb_notion_mirror_root: DB_ID, kb_notion_mirror_url: 'https://notion.so/alpha-aaaa' })
+      )
       await write('Alpha/Leaf/Leaf.md', fm({ kb_notion_mirror_url: 'https://notion.so/leaf-bbbb' }))
-      await write('Omega/Omega.md', fm({ kb_notion_mirror_root: `page:${PAGE_ID}`, kb_notion_mirror_url: 'https://notion.so/omega-cccc' }))
+      await write(
+        'Omega/Omega.md',
+        fm({ kb_notion_mirror_root: `page:${PAGE_ID}`, kb_notion_mirror_url: 'https://notion.so/omega-cccc' })
+      )
 
       const map = buildGlobalLinkMap(kbRoot, s)
       // Notes from BOTH roots are present (bare basename + full path aliases).

@@ -118,7 +118,9 @@ const deletedMirroredNotes = (kbRoot: string, subtree?: string): DeletedNote[] =
       .filter((l) => l.endsWith('.md'))
   const found: DeletedNote[] = []
 
-  const everDeleted = new Set(mdLines(git(kbRoot, ['log', '--diff-filter=D', '--name-only', '--format=', '--', pathspec])))
+  const everDeleted = new Set(
+    mdLines(git(kbRoot, ['log', '--diff-filter=D', '--name-only', '--format=', '--', pathspec]))
+  )
   for (const kbPath of everDeleted) {
     const commits = git(kbRoot, ['log', '--diff-filter=D', '--format=%H', '--', kbPath])
       .split('\n')
@@ -144,7 +146,10 @@ const deletedMirroredNotes = (kbRoot: string, subtree?: string): DeletedNote[] =
  * to archive — those whose url is no longer live anywhere in the working tree —
  * de-duplicated by Notion page id. Exported for unit testing without git/Notion.
  */
-export const selectOrphans = (deleted: DeletedNote[], live: Set<string>): { kbPath: string; url: string; pageId: string }[] => {
+export const selectOrphans = (
+  deleted: DeletedNote[],
+  live: Set<string>
+): { kbPath: string; url: string; pageId: string }[] => {
   const seen = new Set<string>()
   const orphans: { kbPath: string; url: string; pageId: string }[] = []
   for (const { kbPath, url } of deleted) {
@@ -157,7 +162,11 @@ export const selectOrphans = (deleted: DeletedNote[], live: Set<string>): { kbPa
   return orphans
 }
 
-const prune = async (cfg: Config, s: MirrorSettings, opts: { subtree?: string; dryRun: boolean }): Promise<TreeResult> => {
+const prune = async (
+  cfg: Config,
+  s: MirrorSettings,
+  opts: { subtree?: string; dryRun: boolean }
+): Promise<TreeResult> => {
   const kbRoot = requireRoot(cfg)
   ensureGitRepo(kbRoot)
   const orphans = selectOrphans(deletedMirroredNotes(kbRoot, opts.subtree), liveUrls(kbRoot, s))
@@ -182,8 +191,13 @@ const prune = async (cfg: Config, s: MirrorSettings, opts: { subtree?: string; d
  * (default true at the tool boundary) reports what would be archived without
  * calling Notion.
  */
-export const pruneTree = (cfg: Config, subtree: string, s: MirrorSettings, opts: { dryRun: boolean }): Promise<TreeResult> =>
-  prune(cfg, s, { subtree, dryRun: opts.dryRun })
+export const pruneTree = (
+  cfg: Config,
+  subtree: string,
+  s: MirrorSettings,
+  opts: { dryRun: boolean }
+): Promise<TreeResult> => prune(cfg, s, { subtree, dryRun: opts.dryRun })
 
 /** Archive orphaned mirror pages across the whole KB (every deleted note, any root). */
-export const pruneRoots = (cfg: Config, s: MirrorSettings, opts: { dryRun: boolean }): Promise<TreeResult> => prune(cfg, s, { dryRun: opts.dryRun })
+export const pruneRoots = (cfg: Config, s: MirrorSettings, opts: { dryRun: boolean }): Promise<TreeResult> =>
+  prune(cfg, s, { dryRun: opts.dryRun })

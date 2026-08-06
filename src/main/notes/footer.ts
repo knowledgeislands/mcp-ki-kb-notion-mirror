@@ -18,7 +18,13 @@
  * are serialised per parent id (in-memory lock) so concurrent sibling
  * publishes don't race.
  */
-import { appendBlockChildren, deleteBlock, getBlockChildren, type NotionBlock, type NotionConfig } from '../notion-client/index.js'
+import {
+  appendBlockChildren,
+  deleteBlock,
+  getBlockChildren,
+  type NotionBlock,
+  type NotionConfig
+} from '../notion-client/index.js'
 
 /** The sentinel heading text that marks the footer. */
 export const SENTINEL_TEXT = 'Child Pages'

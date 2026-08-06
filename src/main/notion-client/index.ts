@@ -44,7 +44,12 @@ const headers = (cfg: NotionConfig): Record<string, string> => ({
  */
 const NOTION_REQUEST_TIMEOUT_MS = 60_000
 
-const request = async <T>(cfg: NotionConfig, method: 'GET' | 'POST' | 'PATCH' | 'DELETE', apiPath: string, body?: unknown): Promise<T> => {
+const request = async <T>(
+  cfg: NotionConfig,
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+  apiPath: string,
+  body?: unknown
+): Promise<T> => {
   let resp: Response
   try {
     resp = await fetch(`${cfg.notionApiBaseUrl}${apiPath}`, {
@@ -55,7 +60,12 @@ const request = async <T>(cfg: NotionConfig, method: 'GET' | 'POST' | 'PATCH' | 
     })
   } catch (err) {
     if ((err as { name?: string } | null)?.name === 'TimeoutError') {
-      throw new NotionApiError(0, '', 'timeout', `Notion ${method} ${apiPath} timed out after ${NOTION_REQUEST_TIMEOUT_MS}ms`)
+      throw new NotionApiError(
+        0,
+        '',
+        'timeout',
+        `Notion ${method} ${apiPath} timed out after ${NOTION_REQUEST_TIMEOUT_MS}ms`
+      )
     }
     throw err
   }
@@ -71,12 +81,22 @@ const request = async <T>(cfg: NotionConfig, method: 'GET' | 'POST' | 'PATCH' | 
       // non-JSON error body — fall back to the raw text
     }
     const snippet = detail.length > 500 ? `${detail.slice(0, 500)}…` : detail
-    throw new NotionApiError(resp.status, text, code, `Notion ${method} ${apiPath} → HTTP ${resp.status}${code ? ` (${code})` : ''}: ${snippet}`)
+    throw new NotionApiError(
+      resp.status,
+      text,
+      code,
+      `Notion ${method} ${apiPath} → HTTP ${resp.status}${code ? ` (${code})` : ''}: ${snippet}`
+    )
   }
   try {
     return JSON.parse(text) as T
   } catch {
-    throw new NotionApiError(resp.status, text, undefined, `Notion ${method} ${apiPath} returned a non-JSON body (HTTP ${resp.status})`)
+    throw new NotionApiError(
+      resp.status,
+      text,
+      undefined,
+      `Notion ${method} ${apiPath} returned a non-JSON body (HTTP ${resp.status})`
+    )
   }
 }
 
@@ -93,7 +113,12 @@ export const normalizeId = (id: string): string => {
   const lower = id.toLowerCase()
   if (BARE_ID_RE.test(lower)) return lower
   if (DASHED_ID_RE.test(lower)) return lower.replace(/-/g, '')
-  throw new NotionApiError(0, '', 'invalid_id', `Refusing to call Notion with a malformed id: "${id}" (expected 32 hex chars or a dashed UUID)`)
+  throw new NotionApiError(
+    0,
+    '',
+    'invalid_id',
+    `Refusing to call Notion with a malformed id: "${id}" (expected 32 hex chars or a dashed UUID)`
+  )
 }
 
 /** Pull the 32-hex page id out of a notion.so URL (handles slug + query suffixes). */
@@ -147,11 +172,20 @@ export interface UpdatedPage {
  * wiki — discovered via title-property.ts). Under a page parent the new page is
  * a child page, and Notion only accepts the reserved `title` property.
  */
-const titleProperties = (parent: NotionParent, title: string, titleProperty: string | undefined): Record<string, unknown> => {
+const titleProperties = (
+  parent: NotionParent,
+  title: string,
+  titleProperty: string | undefined
+): Record<string, unknown> => {
   const value = { title: [{ text: { content: title } }] }
   if (parent.type === 'database_id') {
     if (titleProperty === undefined) {
-      throw new NotionApiError(0, '', 'missing_title_property', 'A database-parented page needs the database title-property name.')
+      throw new NotionApiError(
+        0,
+        '',
+        'missing_title_property',
+        'A database-parented page needs the database title-property name.'
+      )
     }
     return { [titleProperty]: value }
   }
@@ -294,9 +328,19 @@ export const getBlockChildren = async (cfg: NotionConfig, blockId: string): Prom
  * Pass `after` (a sibling block id) to position the new blocks right after it
  * instead of at the end.
  */
-export const appendBlockChildren = async (cfg: NotionConfig, blockId: string, children: unknown[], after?: string): Promise<string[]> => {
+export const appendBlockChildren = async (
+  cfg: NotionConfig,
+  blockId: string,
+  children: unknown[],
+  after?: string
+): Promise<string[]> => {
   const body = after === undefined ? { children } : { children, after: normalizeId(after) }
-  const resp = await request<{ results?: Array<{ id: string }> }>(cfg, 'PATCH', `/v1/blocks/${normalizeId(blockId)}/children`, body)
+  const resp = await request<{ results?: Array<{ id: string }> }>(
+    cfg,
+    'PATCH',
+    `/v1/blocks/${normalizeId(blockId)}/children`,
+    body
+  )
   return (resp.results ?? []).map((b) => b.id)
 }
 

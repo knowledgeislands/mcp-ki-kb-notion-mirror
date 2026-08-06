@@ -109,12 +109,21 @@ const requireKbRoot = (): string => {
   return kbRoot
 }
 
-const ACTION_GLYPH: Record<string, string> = { touch: '+', update: '~', delete: '✗', skip: '↻', plan: '·', baseline: '=', error: '✗' }
+const ACTION_GLYPH: Record<string, string> = {
+  touch: '+',
+  update: '~',
+  delete: '✗',
+  skip: '↻',
+  plan: '·',
+  baseline: '=',
+  error: '✗'
+}
 
 /** All values following each occurrence of `name` in argv (for repeatable value flags like --skip). */
 const flagValues = (argv: string[], name: string): string[] => {
   const out: string[] = []
-  for (let i = 0; i < argv.length; i++) if (argv[i] === name && argv[i + 1] !== undefined) out.push(argv[i + 1] as string)
+  for (let i = 0; i < argv.length; i++)
+    if (argv[i] === name && argv[i + 1] !== undefined) out.push(argv[i + 1] as string)
   return out
 }
 
@@ -230,7 +239,8 @@ const runRoots = async (verb: string, argv: string[], dryRun: boolean): Promise<
     console.log('No mirror roots declared (kb_notion_mirror_root).')
     return
   }
-  const globalLinkMap = (): Record<string, string> => buildLinkMap(roots.flatMap((r) => publishOrder(kbRoot, r.subtree, s, discover(kbRoot, r.subtree, s))))
+  const globalLinkMap = (): Record<string, string> =>
+    buildLinkMap(roots.flatMap((r) => publishOrder(kbRoot, r.subtree, s, discover(kbRoot, r.subtree, s))))
   // One root's own notes — overlaid on the global map so a bare [[Name]] that
   // collides across roots resolves to THIS root's note, not whichever root sorts
   // last in the global map. Mirrors the MCP tree-update default.

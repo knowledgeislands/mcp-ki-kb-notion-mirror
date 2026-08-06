@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NotionConfig } from '../notion-client/index.js'
 import { buildFooterBlocks, refreshFooter, SENTINEL_TEXT } from './footer.js'
 
-const cfg: NotionConfig = { notionToken: 'ntn_secrettoken', notionApiBaseUrl: 'https://api.notion.test', notionApiVersion: '2022-06-28' }
+const cfg: NotionConfig = {
+  notionToken: 'ntn_secrettoken',
+  notionApiBaseUrl: 'https://api.notion.test',
+  notionApiVersion: '2022-06-28'
+}
 const PARENT = 'a'.repeat(32)
 const CONTENT = '1'.repeat(32)
 const CHILD_A = 'b'.repeat(32)
@@ -11,7 +15,11 @@ const SENT = 'd'.repeat(32)
 
 const content = (id: string) => ({ id, type: 'paragraph', paragraph: { rich_text: [{ plain_text: 'body' }] } })
 const childPage = (id: string) => ({ id, type: 'child_page', child_page: { title: 'X' } })
-const heading = (id: string, text: string) => ({ id, type: 'heading_2', heading_2: { rich_text: [{ plain_text: text }] } })
+const heading = (id: string, text: string) => ({
+  id,
+  type: 'heading_2',
+  heading_2: { rich_text: [{ plain_text: text }] }
+})
 
 const childrenPage = (results: unknown[], next: string | null = null) =>
   new Response(JSON.stringify({ results, has_more: next !== null, next_cursor: next }), { status: 200 })
@@ -20,7 +28,10 @@ const ok = (body: unknown = {}) => new Response(JSON.stringify(body), { status: 
 interface Call {
   method: string
   url: string
-  body?: { children?: Array<{ type: string; heading_2?: { rich_text: Array<{ text: { content: string } }> } }>; after?: string }
+  body?: {
+    children?: Array<{ type: string; heading_2?: { rich_text: Array<{ text: { content: string } }> } }>
+    after?: string
+  }
 }
 
 describe('footer', () => {
@@ -42,10 +53,13 @@ describe('footer', () => {
       expect(SENTINEL_TEXT).toBe('Child Pages')
       const blocks = buildFooterBlocks()
       expect(blocks).toHaveLength(1)
-      expect((blocks[0] as unknown as { type: string; heading_2: { rich_text: Array<{ text: { content: string } }> } }).type).toBe('heading_2')
-      expect((blocks[0] as unknown as { heading_2: { rich_text: Array<{ text: { content: string } }> } }).heading_2.rich_text[0].text.content).toBe(
-        'Child Pages'
-      )
+      expect(
+        (blocks[0] as unknown as { type: string; heading_2: { rich_text: Array<{ text: { content: string } }> } }).type
+      ).toBe('heading_2')
+      expect(
+        (blocks[0] as unknown as { heading_2: { rich_text: Array<{ text: { content: string } }> } }).heading_2
+          .rich_text[0].text.content
+      ).toBe('Child Pages')
     })
   })
 

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { NoFrontmatterError, parseFrontmatter, removeFrontmatterFields, upsertFrontmatterFields } from './frontmatter.js'
+import {
+  NoFrontmatterError,
+  parseFrontmatter,
+  removeFrontmatterFields,
+  upsertFrontmatterFields
+} from './frontmatter.js'
 
 const NOTE = `---
 status: current — May 2026
@@ -94,7 +99,9 @@ body
 `
     const out = upsertFrontmatterFields(text, { kb_notion_mirror_url: 'u' })
     const lines = out.split('\n')
-    expect(lines[lines.indexOf('notion_source_url_secondary: https://www.notion.so/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb') + 1]).toBe('kb_notion_mirror_url: u')
+    expect(
+      lines[lines.indexOf('notion_source_url_secondary: https://www.notion.so/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb') + 1]
+    ).toBe('kb_notion_mirror_url: u')
   })
 
   it('falls back to notion_source_url as the insert anchor', () => {
@@ -107,7 +114,9 @@ body
 `
     const out = upsertFrontmatterFields(text, { kb_notion_mirror_url: 'u' })
     const lines = out.split('\n')
-    expect(lines[lines.indexOf('notion_source_url: https://www.notion.so/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa') + 1]).toBe('kb_notion_mirror_url: u')
+    expect(lines[lines.indexOf('notion_source_url: https://www.notion.so/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa') + 1]).toBe(
+      'kb_notion_mirror_url: u'
+    )
   })
 
   it('appends at the end when no anchor field is present', () => {
@@ -128,7 +137,9 @@ body
   })
 
   it('throws NoFrontmatterError when the note has no frontmatter', () => {
-    expect(() => upsertFrontmatterFields('no frontmatter here', { kb_notion_mirror_url: 'u' })).toThrow(NoFrontmatterError)
+    expect(() => upsertFrontmatterFields('no frontmatter here', { kb_notion_mirror_url: 'u' })).toThrow(
+      NoFrontmatterError
+    )
   })
 })
 

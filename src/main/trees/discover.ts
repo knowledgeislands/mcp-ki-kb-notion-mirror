@@ -168,7 +168,12 @@ export const indexKbPathFor = (folderKbPath: string): string => `${folderKbPath}
  * isn't in the map (parents must be published first; `publishOrder` ensures
  * this for non-degenerate trees).
  */
-export const resolveParent = (n: Note, subtree: string, rootParent: NotionParent, urlByKbPath: Map<string, string>): NotionParent => {
+export const resolveParent = (
+  n: Note,
+  subtree: string,
+  rootParent: NotionParent,
+  urlByKbPath: Map<string, string>
+): NotionParent => {
   const folderKbPath = dirname(n.kbPath)
   if (n.isIndex) {
     if (folderKbPath === subtree) return rootParent

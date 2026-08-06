@@ -6,7 +6,10 @@ describe('banner', () => {
   it('builds a 📘 callout, interpolates {date}, and renders **bold** via martian', () => {
     const block = bannerBlock(DEFAULT_BANNER_TEMPLATE, '2026-05-30') as {
       type: string
-      callout: { icon: { emoji: string }; rich_text: Array<{ text: { content: string }; annotations?: { bold?: boolean } }> }
+      callout: {
+        icon: { emoji: string }
+        rich_text: Array<{ text: { content: string }; annotations?: { bold?: boolean } }>
+      }
     }
     expect(block.type).toBe('callout')
     expect(block.callout.icon).toEqual({ type: 'emoji', emoji: '📘' })
@@ -17,7 +20,9 @@ describe('banner', () => {
   })
 
   it('honours a custom template', () => {
-    const block = bannerBlock('Synced {date} — see KB.', '2026-01-02') as { callout: { rich_text: Array<{ text: { content: string } }> } }
+    const block = bannerBlock('Synced {date} — see KB.', '2026-01-02') as {
+      callout: { rich_text: Array<{ text: { content: string } }> }
+    }
     expect(block.callout.rich_text.map((r) => r.text.content).join('')).toBe('Synced 2026-01-02 — see KB.')
   })
 

@@ -18,7 +18,11 @@ import {
 const DB_ID = '36f9f7187cc280f69272e60aa89bff24'
 const PAGE_HEX = '3709f7187cc2814e8652f99fd36857ff'
 const PAGE_DASHED = '3709f718-7cc2-814e-8652-f99fd36857ff'
-const cfg: NotionConfig = { notionToken: 'ntn_secrettoken', notionApiBaseUrl: 'https://api.notion.test', notionApiVersion: '2022-06-28' }
+const cfg: NotionConfig = {
+  notionToken: 'ntn_secrettoken',
+  notionApiBaseUrl: 'https://api.notion.test',
+  notionApiVersion: '2022-06-28'
+}
 const PAGE_RESPONSE = {
   id: PAGE_DASHED,
   url: 'https://www.notion.so/Slug-3709f7187cc2814e8652f99fd36857ff',
@@ -100,7 +104,9 @@ describe('notion-client (mcp-kb-notion-mirror)', () => {
     })
 
     it('throws when a database parent is given without a title property name', async () => {
-      await expect(createPage(cfg, { parent: { type: 'database_id', database_id: DB_ID }, title: 'x', children: [] })).rejects.toThrow(NotionApiError)
+      await expect(
+        createPage(cfg, { parent: { type: 'database_id', database_id: DB_ID }, title: 'x', children: [] })
+      ).rejects.toThrow(NotionApiError)
       expect(fetchMock).not.toHaveBeenCalled()
     })
 
@@ -108,7 +114,12 @@ describe('notion-client (mcp-kb-notion-mirror)', () => {
       fetchMock.mockResolvedValueOnce(ok(PAGE_RESPONSE)) // create (id is dashed)
       fetchMock.mockResolvedValueOnce(ok({})) // append batch
       const children = Array.from({ length: 150 }, (_, i) => ({ i }))
-      await createPage(cfg, { parent: { type: 'database_id', database_id: DB_ID }, titleProperty: 'Page', title: 'Big', children })
+      await createPage(cfg, {
+        parent: { type: 'database_id', database_id: DB_ID },
+        titleProperty: 'Page',
+        title: 'Big',
+        children
+      })
       expect(fetchMock).toHaveBeenCalledTimes(2)
       const [createInit, appendCall] = [JSON.parse(fetchMock.mock.calls[0]?.[1].body), fetchMock.mock.calls[1]]
       expect(createInit.children).toHaveLength(100)
@@ -165,14 +176,20 @@ describe('notion-client (mcp-kb-notion-mirror)', () => {
       const [url, init] = fetchMock.mock.calls[0] ?? []
       expect(url).toBe(`https://api.notion.test/v1/pages/${PAGE_HEX}`)
       expect(init.method).toBe('PATCH')
-      expect(JSON.parse(init.body)).toEqual({ parent: { type: 'page_id', page_id: '0000000000000000000000000000abcd' } })
+      expect(JSON.parse(init.body)).toEqual({
+        parent: { type: 'page_id', page_id: '0000000000000000000000000000abcd' }
+      })
     })
   })
 
   describe('block helpers', () => {
     it('getBlockChildren follows pagination and returns all results in order', async () => {
-      fetchMock.mockResolvedValueOnce(ok({ results: [{ id: '1', type: 'child_page' }], has_more: true, next_cursor: 'c1' }))
-      fetchMock.mockResolvedValueOnce(ok({ results: [{ id: '2', type: 'paragraph' }], has_more: false, next_cursor: null }))
+      fetchMock.mockResolvedValueOnce(
+        ok({ results: [{ id: '1', type: 'child_page' }], has_more: true, next_cursor: 'c1' })
+      )
+      fetchMock.mockResolvedValueOnce(
+        ok({ results: [{ id: '2', type: 'paragraph' }], has_more: false, next_cursor: null })
+      )
       const blocks = await getBlockChildren(cfg, PAGE_HEX)
       expect(blocks.map((b) => b.id)).toEqual(['1', '2'])
       expect(fetchMock.mock.calls[0]?.[0]).toBe(`https://api.notion.test/v1/blocks/${PAGE_HEX}/children?page_size=100`)
@@ -192,7 +209,10 @@ describe('notion-client (mcp-kb-notion-mirror)', () => {
     it('appendBlockChildren positions the payload after a sibling when `after` is given (id normalized)', async () => {
       fetchMock.mockResolvedValueOnce(ok({}))
       await appendBlockChildren(cfg, PAGE_HEX, [{ type: 'heading_2' }], PAGE_DASHED)
-      expect(JSON.parse(fetchMock.mock.calls[0]?.[1].body)).toEqual({ children: [{ type: 'heading_2' }], after: PAGE_HEX })
+      expect(JSON.parse(fetchMock.mock.calls[0]?.[1].body)).toEqual({
+        children: [{ type: 'heading_2' }],
+        after: PAGE_HEX
+      })
     })
 
     it('deleteBlock issues a DELETE', async () => {
@@ -217,14 +237,20 @@ describe('notion-client (mcp-kb-notion-mirror)', () => {
     })
 
     it('deleteBlock still throws on a non-archived failure', async () => {
-      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ code: 'validation_error', message: 'Some other validation problem.' }), { status: 400 }))
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ code: 'validation_error', message: 'Some other validation problem.' }), {
+          status: 400
+        })
+      )
       await expect(deleteBlock(cfg, PAGE_HEX)).rejects.toThrow(NotionApiError)
     })
   })
 
   describe('error translation', () => {
     it('throws NotionApiError with status + code + message, never leaking the token', async () => {
-      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ code: 'unauthorized', message: 'API token is invalid.' }), { status: 401 }))
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ code: 'unauthorized', message: 'API token is invalid.' }), { status: 401 })
+      )
       const err = await archivePage(cfg, PAGE_HEX).catch((e) => e)
       expect(err).toBeInstanceOf(NotionApiError)
       expect(err.status).toBe(401)
