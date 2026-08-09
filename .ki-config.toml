@@ -13,11 +13,15 @@ visibility = "public"
 
 [skills.ki-engineering]
 
-[skills.ki-mcp]
+[skills.ki-repo-project]
 
-[skills.ki-roadmap]
-[skills.ki-roadmap.themes]
-TOOL = "tool-surface"
+[skills.ki-repo-mcp]
+
+[skills.ki-change-management]
+adapter = "roadmap"
+
+[skills.ki-change-management-roadmap]
+themes = ["tool-surface"]
 
 [skills.ki-tokenomics]
 

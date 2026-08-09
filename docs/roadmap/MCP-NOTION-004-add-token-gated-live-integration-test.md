@@ -1,6 +1,6 @@
 ---
-id: MCP-NOTION-TOOL-003
-title: Synchronise backlinks
+id: MCP-NOTION-004
+title: Add gated integration test
 theme: tool-surface
 horizon: future
 status: draft
@@ -12,11 +12,11 @@ baseline-ref: null
 
 ## Goal
 
-Achieve the stated outcome: Synchronise backlinks.
+Achieve the stated outcome: Add a token-gated live integration test.
 
 ## Context
 
-Write the mirror's inbound links back into the KB note for a fuller provenance trail.
+Add a skipped-by-default `*.live.test.ts` suite for occasional end-to-end checks against a throwaway Notion workspace, including cross-parent-type move failure detection.
 
 ## Boundary
 

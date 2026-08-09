@@ -1,5 +1,5 @@
 ---
-id: MCP-NOTION-TOOL-002
+id: MCP-NOTION-002
 title: Add KB note diff
 theme: tool-surface
 horizon: next
@@ -60,7 +60,7 @@ The banner, footer, and frontmatter modules are read-only inputs here and should
 
 ## Dependencies / blocks
 
-This item is neither blocked by nor blocking another item. It touches the same `updateNote` render path as [MCP-NOTION-TOOL-001](MCP-NOTION-TOOL-001-build-image-upload-pipeline.md); doing the render/compare split here first gives that item a cleaner seam to hook image substitution into.
+This item is neither blocked by nor blocking another item. It touches the same `updateNote` render path as [MCP-NOTION-001](MCP-NOTION-001-build-image-upload-pipeline.md); doing the render/compare split here first gives that item a cleaner seam to hook image substitution into.
 
 ## Discussion
 
