@@ -1,5 +1,6 @@
 ---
-id: MCP-NOTION-003
+id: MCP-NOTION-TOOL-003
+area: TOOL
 title: Synchronise backlinks
 theme: tool-surface
 horizon: future

@@ -1,5 +1,6 @@
 ---
-id: MCP-NOTION-004
+id: MCP-NOTION-TOOL-004
+area: TOOL
 title: Add gated integration test
 theme: tool-surface
 horizon: future

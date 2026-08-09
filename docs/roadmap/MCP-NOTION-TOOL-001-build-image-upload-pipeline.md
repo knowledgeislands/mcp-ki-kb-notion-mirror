@@ -1,5 +1,6 @@
 ---
-id: MCP-NOTION-001
+id: MCP-NOTION-TOOL-001
+area: TOOL
 title: Build image upload pipeline
 theme: tool-surface
 horizon: next
@@ -64,7 +65,7 @@ No tool is added or removed, so `src/tools/`, `src/cli/`, and `scripts/smoke.ts`
 
 ## Dependencies / blocks
 
-This item is neither blocked by nor blocking another item. It shares the `updateNote` render path with [MCP-NOTION-002](MCP-NOTION-002-add-note-diff.md); whichever lands second inherits the other's shape of that path, and the diff item's render/compare split is the more convenient order if both are scheduled together.
+This item is neither blocked by nor blocking another item. It shares the `updateNote` render path with [MCP-NOTION-TOOL-002](MCP-NOTION-TOOL-002-add-note-diff.md); whichever lands second inherits the other's shape of that path, and the diff item's render/compare split is the more convenient order if both are scheduled together.
 
 ## Discussion
 

@@ -10,7 +10,7 @@
  * `collapseSoftBreaks`). The banner is prepended separately (see src/banner.ts)
  * by the publish pipeline.
  *
- * Known gaps (tracked in docs/roadmap/MCP-NOTION-001): local image references render as their
+ * Known gaps (tracked in docs/roadmap/MCP-NOTION-TOOL-001): local image references render as their
  * alt-text paragraph rather than uploaded images, and `[[wikilinks]]` pass
  * through as literal text.
  */

@@ -23,6 +23,9 @@ adapter = "roadmap"
 [skills.ki-change-management-roadmap]
 themes = ["tool-surface"]
 
+[skills.ki-change-management-roadmap.areas]
+TOOL = "tool-surface"
+
 [skills.ki-tokenomics]
 
 [skills.ki-housekeeping-claude]
