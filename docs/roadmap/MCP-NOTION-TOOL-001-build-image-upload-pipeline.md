@@ -67,6 +67,24 @@ No tool is added or removed, so `src/tools/`, `src/cli/`, and `scripts/smoke.ts`
 
 This item is neither blocked by nor blocking another item. It shares the `updateNote` render path with [MCP-NOTION-TOOL-002](MCP-NOTION-TOOL-002-add-note-diff.md); whichever lands second inherits the other's shape of that path, and the diff item's render/compare split is the more convenient order if both are scheduled together.
 
+## Documentation impact
+
+### Decision Records
+
+None.
+
+### Specifications
+
+None.
+
+### Guides
+
+Update the README with the image-upload behaviour and any new configuration.
+
+### Roadmap
+
+No additional roadmap impact.
+
 ## Discussion
 
 ### Upload contract is unsettled
