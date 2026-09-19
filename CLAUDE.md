@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+@AGENTS.md
+
 Guidance for Claude Code when working in this repo. The user-facing tool surface, install/config, and Claude Desktop setup live in [README.md](./README.md); this file covers what Claude needs that isn't in README and isn't derivable from one grep.
 
 Targets the MCP specification **2025-11-25** (the workspace MCP standard's tracked release). Tool-result, error-envelope, and metadata behaviour conform to that revision.
