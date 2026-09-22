@@ -4,13 +4,13 @@ title: Establish audience-centric guides
 area: TOOL
 theme: tool-surface
 horizon: now
-status: draft
+status: ready
 blocks: []
 blocked_by: []
 transferred_from: ki-website
 baseline_ref: null
 created_at: 2026-09-21T15:44:00Z
-updated_at: 2026-09-21T16:40:00Z
+updated_at: 2026-09-22T07:14:00Z
 ---
 
 ## Goal
@@ -21,7 +21,7 @@ A reader can find practical instructions for this server grouped by the audience
 
 `mcp-ki-kb-notion-mirror` has no `docs/guides/` and does not declare `ki-guides`. Its README is unusual among the MCP servers: it opens with conceptual material — the verb model, the folder-index hierarchy convention, two-phase publishing, the frontmatter contract — and only then reaches Setup, environment variables, and running locally. Some of that is a specification rather than a guide, and separating the two is part of the work.
 
-This repository's roadmap ledger currently reserves only a `TOOL` area, so this item also opens `FND`.
+This repository's roadmap ledger reserves only a `TOOL` area. The transferred draft proposed opening an `FND` area alongside it; shaping rejected that, and the reasoning is recorded under Shaping.
 
 KI Website now declares, for every page it publishes under `apps/site/src/guidance/`, the exact upstream document and pinned ref that page was written from, and a `verify:guidance --network` sweep reports the pages whose source has moved. The site intends to derive public guidance for this project from this repository's own guides and cite them at a pinned ref, so the quality and stability of `docs/guides/` here directly determines the quality of what the site can publish.
 
@@ -37,33 +37,77 @@ KI Website derives and cites; it does not own this collection and must not be gi
 
 ## Shaping
 
-- Decide the audience directories this server needs. `user/` covers someone who wants the server running against their own account; `developer/` covers someone changing its code; an `operator/` split is worth considering where running it is a separate job from using it.
-- Move the README's how-to material into those guides rather than copying it. A README that both orients and instructs is the thing being consolidated, and finishing with two copies is worse than not starting.
-- Leave the README as orientation: what the server is, what it can do, and where to go next. Feature lists and tool inventories can stay; step-by-step setup should not.
-- Declare `[skills.ki-guides]` in `.ki.toml` and run `ki repo audit --skill ki-guides --repo .` to gate the result.
-- Decide whether the tool inventory is a guide at all. It may belong in a specification or be generated from the server's own tool declarations; a hand-maintained list that drifts from the code is the usual failure.
+Shaping settled five questions. Each is a decision, not an option left for implementation.
+
+### Two audiences, not three
+
+`user/` and `developer/`. `operator/` is rejected.
+
+An operator audience exists where running a system is a separate job from using it — a deployed service, a shared instance, a rota. This server is a local stdio process that the reader's own MCP client launches on the reader's own machine, against the reader's own Notion integration and the reader's own knowledge base. The person who creates the token is the person who publishes the notes. Nothing in the repository — no deployment, no hosted endpoint, no shared state beyond one local audit log — is written for anyone else. An `operator/` directory would hold the access level and the audit log, and both belong to the person who configured the token.
+
+Material that looks operational therefore lands in `user/`: the access-level gate and the audit log are configuration choices the installing reader makes, and recovery from a failed publish is recovery for the person who ran it.
+
+### The README loses its instructions, not its model
+
+The README keeps what the server is, the verb model, the tool inventory, and a documentation map. It loses every step-by-step sequence: creating the Notion integration, building, wiring a client, the environment-variable table, the access-level table, running locally, and the publish CLI. Each of those moves once. Where the README needs to keep a concept intelligible it keeps a two-sentence summary and links to the guide that carries the procedure; a summary that a reader could act on is a second copy and is not acceptable.
+
+### The tool inventory stays in the README and becomes no guide
+
+A guide answers how. An inventory answers what, and this one is already a capability catalogue in the entry point where a reader deciding whether to adopt the server will look for it. Copying it under `docs/guides/` would create the drifting second copy the item warns about, and moving it there would push a catalogue into a category that does not hold catalogues.
+
+Drift is real but it is not a placement problem. `scripts/smoke.ts` asserts the exact fourteen-name wire surface against the built server, so a tool added or renamed without updating that list fails `bun run ki:test:smoke`; nothing mechanically checks the README's prose about those tools. Making the inventory generated, or giving it normative force in a specification, is a separate piece of work: this repository does not declare `ki-specs`, and manufacturing a specification corpus to make a guide look complete is exactly what the Guides standard forbids. The gap is named here and routed to `ki-specs`; it is not closed by this item.
+
+### No new area
+
+The item is `MCP-NOTION-TOOL-008`, already issued under the `TOOL` area. Adding an `FND` area to `.ki.toml` for an item that cannot use it would leave a reserved namespace no record occupies. Documentation of a tool's use is part of that tool's surface, which is what `TOOL` and the `tool-surface` theme already cover.
+
+### No release guide
+
+`tools-git-almanac` and `tools-mgit` both carry `developer/releasing.md` because both publish a release a stranger installs. This package is consumed from a local checkout, has no publish script, no release workflow in `.github/workflows/`, and no tap or installer route. Writing a release guide would be documenting a procedure that does not exist. `developer/` gets local development and a definition of done.
 
 ## Current state
 
-There is no `docs/guides/` directory and `.ki.toml` declares no `[skills.ki-guides]` block, so nothing gates whether the collection exists or what shape it takes. The practical material catalogued in Context sits in `README.md`, where a reader arriving with a task has to reconstruct that task out of reference prose.
+There is no `docs/guides/` directory and `.ki.toml` declares no `[skills.ki-guides]` block, so nothing gates whether the collection exists or what shape it takes. `docs/` holds `decisions/` and `roadmap/` only. `ki repo audit --concise --progress never` passes at 15 skills, and `ki-guides` will be the sixteenth.
+
+`README.md` is 256 lines and carries both concerns at once. Read against the split above, its sections divide as follows.
+
+- Orientation that stays: the opening description, the three resources, the no-fixed-root statement, the conformance line, the verb model table, the two-phase design statement, and the fourteen-tool inventory.
+- Model material that becomes a summary plus a link: the folder-index hierarchy convention, what a `touch`/`update` actually does, the wikilink `link_map`, the child-pages footer and its `Child Pages` sentinel, and the frontmatter contract.
+- Instruction that moves out whole: `## Setup` (integration, build, client wiring), `## Environment variables`, `## Access levels`, `## Publish CLI`, `## Running locally`, the two-phase publish procedure block, the roots declaration, and the move/delete caveat.
+
+The failure modes a troubleshooting guide has to cover already exist as literal strings in the source and are quotable rather than invented: `Note is not mirrored yet — call touch before update.`, `Note has no YAML frontmatter; refusing to mirror.`, `Notion silently ignored the parent change`, `Missing folder index:`, `required parent index not yet published:`, `prune needs the KB root to be a git repository:`, `MCP_KI_KB_NOTION_MIRROR_KB_ROOT must be set`, and the `NotionApiError` envelope carrying Notion's own `restricted_resource` / HTTP status.
 
 ## Steps
 
-- [ ] Name the audiences this server actually has, and reject any audience nobody is writing for.
-- [ ] Create `docs/guides/README.md` as the collection index, routing by audience and nothing else.
-- [ ] Create one directory per named audience, each with its own `README.md`.
-- [ ] Move the README's how-to material into the guide that owns it, leaving the README to orient and link.
-- [ ] Write what is missing: installation and client configuration, the credentials the server needs, and recovery from its common failures.
+- [ ] Create `docs/guides/README.md` as the collection index: scope, a route to each audience, and a "what lives elsewhere" pointer to `docs/decisions/` and `docs/roadmap/`.
+- [ ] Create `docs/guides/user/README.md` and `docs/guides/developer/README.md` as audience indexes.
+- [ ] Write `docs/guides/user/installation.md` from the README's `## Setup`, `## Environment variables` and `## Access levels`, adding the confirmation step a reader needs to know it worked.
+- [ ] Write `docs/guides/user/mirroring-a-knowledge-base.md` from the folder-index convention, the roots declaration, the two-phase publish procedure, the wikilink `link_map`, and the publish CLI.
+- [ ] Write `docs/guides/user/what-the-mirror-owns.md` from the frontmatter contract, the touch/update mechanics, the child-pages sentinel, and the exclusion rules — stated as what the server writes, what it leaves alone, and what it refuses.
+- [ ] Write `docs/guides/user/troubleshooting.md` against the failure strings listed under Current state, each with its cause and its recovery.
+- [ ] Write `docs/guides/developer/local-development.md` from `## Running locally`, including the `.env` precedence order and the inspector route.
+- [ ] Write `docs/guides/developer/definition-of-done.md` from the gates in `AGENTS.md` and the invariants in `CLAUDE.md`.
+- [ ] Reduce `README.md` to orientation: delete every moved section, replace the model sections with a summary and a link, and add a documentation map.
 - [ ] Declare `[skills.ki-guides]` in `.ki.toml`.
-- [ ] Run the guides audit and repair what it reports.
+- [ ] Run the guides and authoring audits, then the full audit, and repair what they report.
 
 ## Files touched
 
-`docs/guides/` (new), `.ki.toml`, `README.md`.
+- `docs/guides/README.md` (new)
+- `docs/guides/user/README.md`, `installation.md`, `mirroring-a-knowledge-base.md`, `what-the-mirror-owns.md`, `troubleshooting.md` (new)
+- `docs/guides/developer/README.md`, `local-development.md`, `definition-of-done.md` (new)
+- `README.md`
+- `.ki.toml`
+- `docs/roadmap/MCP-NOTION-TOOL-008-establish-audience-centric-guides.md`
 
 ## Verify
 
-`ki repo audit --skill ki-guides --repo .` passes, and `ki repo audit --skill ki-authoring --repo .` passes over the new Markdown.
+- `ki repo audit --skill ki-guides --concise --progress never` passes.
+- `ki repo audit --skill ki-authoring --concise --progress never` passes over the new Markdown.
+- `ki repo audit --concise --progress never` passes at 16 skills — the 15 it passes today plus `ki-guides`.
+- Every relative link in the new collection and in the reduced `README.md` resolves to a file that exists.
+- No instruction the README carried today exists in two places: each moved section appears in exactly one guide, and what remains in the README is a summary a reader cannot act on without following the link.
+- The code gates are untouched by this item, but `bun run test` and `bun run build` are run once at the end to prove no source file was disturbed.
 
 ## Dependencies / blocks
 
