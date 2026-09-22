@@ -4,13 +4,13 @@ title: Establish audience-centric guides
 area: TOOL
 theme: tool-surface
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
 transferred_from: ki-website
-baseline_ref: null
+baseline_ref: bffc063e1e0114b46296b4c59b51efbde53c62f4
 created_at: 2026-09-21T15:44:00Z
-updated_at: 2026-09-22T07:14:00Z
+updated_at: 2026-09-22T08:30:00Z
 ---
 
 ## Goal
@@ -31,7 +31,7 @@ Separately, `ki-guides` is being asked to require audience directories under `do
 
 ## Boundary
 
-Adopted into `Now` by explicit approval, so this is prioritised work rather than intake. It remains `status: draft`: `ki-plan` shapes it to `Ready` before any implementation, and this repository still owns its plan and sequencing.
+Adopted into `Now` by explicit approval, so this is prioritised work rather than intake. It was shaped to `ready` by `ki-plan` before any implementation, and this repository owns its plan and sequencing throughout.
 
 KI Website derives and cites; it does not own this collection and must not be given approval rights over it. Nothing here requires a guide to be written for the website's benefit — if a guide would not serve this repository's own readers, it should not exist.
 
@@ -79,17 +79,17 @@ The failure modes a troubleshooting guide has to cover already exist as literal 
 
 ## Steps
 
-- [ ] Create `docs/guides/README.md` as the collection index: scope, a route to each audience, and a "what lives elsewhere" pointer to `docs/decisions/` and `docs/roadmap/`.
-- [ ] Create `docs/guides/user/README.md` and `docs/guides/developer/README.md` as audience indexes.
-- [ ] Write `docs/guides/user/installation.md` from the README's `## Setup`, `## Environment variables` and `## Access levels`, adding the confirmation step a reader needs to know it worked.
-- [ ] Write `docs/guides/user/mirroring-a-knowledge-base.md` from the folder-index convention, the roots declaration, the two-phase publish procedure, the wikilink `link_map`, and the publish CLI.
-- [ ] Write `docs/guides/user/what-the-mirror-owns.md` from the frontmatter contract, the touch/update mechanics, the child-pages sentinel, and the exclusion rules — stated as what the server writes, what it leaves alone, and what it refuses.
-- [ ] Write `docs/guides/user/troubleshooting.md` against the failure strings listed under Current state, each with its cause and its recovery.
-- [ ] Write `docs/guides/developer/local-development.md` from `## Running locally`, including the `.env` precedence order and the inspector route.
-- [ ] Write `docs/guides/developer/definition-of-done.md` from the gates in `AGENTS.md` and the invariants in `CLAUDE.md`.
-- [ ] Reduce `README.md` to orientation: delete every moved section, replace the model sections with a summary and a link, and add a documentation map.
-- [ ] Declare `[skills.ki-guides]` in `.ki.toml`.
-- [ ] Run the guides and authoring audits, then the full audit, and repair what they report.
+- [x] Create `docs/guides/README.md` as the collection index: scope, a route to each audience, and a "what lives elsewhere" pointer to `docs/decisions/` and `docs/roadmap/`.
+- [x] Create `docs/guides/user/README.md` and `docs/guides/developer/README.md` as audience indexes.
+- [x] Write `docs/guides/user/installation.md` from the README's `## Setup`, `## Environment variables` and `## Access levels`, adding the confirmation step a reader needs to know it worked.
+- [x] Write `docs/guides/user/mirroring-a-knowledge-base.md` from the folder-index convention, the roots declaration, the two-phase publish procedure, the wikilink `link_map`, and the publish CLI.
+- [x] Write `docs/guides/user/what-the-mirror-owns.md` from the frontmatter contract, the touch/update mechanics, the child-pages sentinel, and the exclusion rules — stated as what the server writes, what it leaves alone, and what it refuses.
+- [x] Write `docs/guides/user/troubleshooting.md` against the failure strings listed under Current state, each with its cause and its recovery.
+- [x] Write `docs/guides/developer/local-development.md` from `## Running locally`, including the `.env` precedence order and the inspector route.
+- [x] Write `docs/guides/developer/definition-of-done.md` from the gates in `AGENTS.md` and the invariants in `CLAUDE.md`.
+- [x] Reduce `README.md` to orientation: delete every moved section, replace the model sections with a summary and a link, and add a documentation map.
+- [x] Declare `[skills.ki-guides]` in `.ki.toml`.
+- [x] Run the guides and authoring audits, then the full audit, and repair what they report.
 
 ## Files touched
 
@@ -130,6 +130,60 @@ This item is entirely guide impact. It creates the collection, its audience dire
 ### Roadmap
 
 No further roadmap change is expected. If writing the guides exposes behaviour that cannot honestly be explained — an unclear failure mode, a configuration step with no recovery — that is a separate item raised at the time.
+
+## Review
+
+### Delivered
+
+`docs/guides/` now exists as a gated collection with two audience directories, and `.ki.toml` declares `[skills.ki-guides]` so its shape is checked rather than merely conventional. Nine files were created: the collection index, an index per audience, four user guides (`installation.md`, `mirroring-a-knowledge-base.md`, `what-the-mirror-owns.md`, `troubleshooting.md`) and two developer guides (`local-development.md`, `definition-of-done.md`).
+
+`README.md` fell from 256 lines to 92. Every step-by-step sequence it carried moved out exactly once; what remains is orientation — what the server is, the verb model, the fourteen-tool inventory, a four-item summary of the conventions the tools rely on, and a documentation map. The three shaping decisions that constrain the result held: two audiences and no `operator/`, the tool inventory staying in the README as a capability catalogue rather than becoming a guide, and no release guide for a package with no release.
+
+### Summary of changes
+
+- `docs/guides/README.md` — collection index: scope, a route to each audience, and a pointer to `docs/decisions/` and `docs/roadmap/` for the material that is not a guide.
+- `docs/guides/user/README.md`, `docs/guides/developer/README.md` — audience indexes, each naming who it is for and routing to its guides.
+- `docs/guides/user/installation.md` — the Notion internal integration and the connection step that causes most first-run failures, the build, client wiring with a worked `claude_desktop_config.json`, the full environment-variable table, the access-level table, and a confirmation step that tells a reader the install worked.
+- `docs/guides/user/mirroring-a-knowledge-base.md` — the folder-index hierarchy convention, mirror-root declaration, preflight, the touch-all then update-all procedure, wikilink resolution through `link_map`, and the publish CLI including the `--dry-run` asymmetry between the CLI and the MCP tools.
+- `docs/guides/user/what-the-mirror-owns.md` — the three frontmatter fields the server writes and when each is written, the fields it reads but never writes, the anchor order line surgery uses, what it refuses to do, and the `Child Pages` sentinel it maintains in Notion only.
+- `docs/guides/user/troubleshooting.md` — each failure the server can produce, quoted from source, with its cause and its recovery.
+- `docs/guides/developer/local-development.md` — the dev loop, the inspector route, and the `.env` precedence order.
+- `docs/guides/developer/definition-of-done.md` — the gates from `AGENTS.md` and the invariants from `CLAUDE.md` stated as a checklist a change must pass.
+- `README.md` — reduced to orientation; moved sections deleted, model sections replaced by a summary plus a link, documentation map added.
+- `CONTRIBUTING.md` — one link repointed from the now-removed `README.md#setup` anchor to the installation guide.
+- `.ki.toml` — `[skills.ki-guides]` declared with no keys, matching the exemplar repositories.
+
+### Verification
+
+- `ki repo audit --skill ki-guides --concise --progress never` → `summary: KI REPO AUDIT on mcp-ki-kb-notion-mirror PASS · 1 skill`
+- `ki repo audit --skill ki-authoring --concise --progress never` → `summary: KI REPO AUDIT on mcp-ki-kb-notion-mirror PASS · 1 skill`
+- `ki repo audit --concise --progress never` → `summary: KI REPO AUDIT on mcp-ki-kb-notion-mirror PASS · 16 skills` — the 15 that passed at baseline plus `ki-guides`.
+- Every relative link in the collection and in the reduced `README.md` and `CONTRIBUTING.md` was resolved against the filesystem; none is broken.
+- Ten marker strings from the moved sections were grepped across `README.md`, `CONTRIBUTING.md` and `docs/guides/`; each appears in exactly one guide, and what the README retains is a summary that cannot be acted on without following its link.
+- `bun run build` — exit 0.
+- `bun run test` → `Test Files  19 passed (19)` / `Tests  289 passed (289)`, unchanged from the baseline this item started at.
+
+The authoring audit failed once during the work, reporting `[MD049] Emphasis use _ instead of *` in the troubleshooting guide and `[MD051] Link fragment 'setup' not found in './README.md'` in `CONTRIBUTING.md` — the second being real breakage caused by deleting the README's Setup section. Both were fixed and the audit re-run clean.
+
+### Outstanding concerns
+
+`roots publish --dry-run` is a silent no-op. `--dry-run` is honoured by `delete` and `prune` only; elsewhere the CLI accepts it and publishes for real. The guides state this plainly rather than paper over it, but it is a safety defect in the CLI, not in the documentation, and it wants its own item.
+
+Nothing mechanically checks the README's tool inventory. `scripts/smoke.ts` asserts the exact fourteen-name wire surface, so a renamed tool fails `bun run ki:test:smoke`, but the prose beside it can drift silently. Closing that means generating the inventory or giving it normative force in a specification; this repository does not declare `ki-specs`, so the gap is named and routed rather than closed here.
+
+`CONTRIBUTING.md` still carries developer how-to — the dev loop, the conventions, the pre-PR checklist — that now also has a home under `docs/guides/developer/`. That overlap predates this item and was left alone deliberately: `CONTRIBUTING.md` is the file a drive-by contributor opens, and collapsing it into the guides is a separate decision about who that file is for.
+
+### Post-change review
+
+The split that mattered was not user versus developer but instruction versus model. Sorting the README by audience first produced an incoherent result, because its conceptual material serves both audiences and its procedures serve one each; sorting by whether a section tells a reader what to type made the audience assignment fall out by itself.
+
+Writing the troubleshooting guide against literal strings from the source rather than from recollection caught two errors that would otherwise have shipped: a message quoted from memory did not match the source, and the `--dry-run` scope was narrower than the README implied. Any guide that quotes a failure should be written with the source open.
+
+The `operator/` rejection is the decision most likely to be revisited. It holds because this is a local stdio process where the person who creates the token is the person who publishes the notes. If the server ever acquires a hosted or shared mode, that reasoning expires and the access-level and audit-log material moves.
+
+### Mini recap
+
+A repository with no guides and a 256-line README that mixed a specification with a manual now has a gated `docs/guides/` collection, two audiences, nine files, and a 92-line README that orients rather than instructs. All three audits pass, the full audit is up from 15 skills to 16, and the code gates are untouched.
 
 ## Discussion
 

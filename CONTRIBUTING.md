@@ -29,7 +29,7 @@ bun run ki:lint:md             # prettier + markdownlint for *.md
 bun run build               # tsc -p tsconfig.build.json → dist/
 ```
 
-You'll need a Notion internal-integration secret in `MCP_KI_KB_NOTION_MIRROR_TOKEN` and a KB root in `MCP_KI_KB_NOTION_MIRROR_KB_ROOT` for any live publishing — see [README.md](./README.md#setup). The `subtree` to mirror and the Notion `parent` it attaches under are passed per call (tool args / CLI flags), not via env. Unit tests need none of this: the Notion client is exercised through `fetch` mocks and config is injected via `loadConfig(env)` literals.
+You'll need a Notion internal-integration secret in `MCP_KI_KB_NOTION_MIRROR_TOKEN` and a KB root in `MCP_KI_KB_NOTION_MIRROR_KB_ROOT` for any live publishing — see [Install and configure the mirror](./docs/guides/user/installation.md). The `subtree` to mirror and the Notion `parent` it attaches under are passed per call (tool args / CLI flags), not via env. Unit tests need none of this: the Notion client is exercised through `fetch` mocks and config is injected via `loadConfig(env)` literals.
 
 ## Conventions
 
