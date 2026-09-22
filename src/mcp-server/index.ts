@@ -37,8 +37,8 @@
  *                                      ~/.local/state/mcp-ki-kb-notion-mirror/audit.jsonl.
  */
 
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { McpServer } from '@modelcontextprotocol/server'
+import { serveStdio } from '@modelcontextprotocol/server/stdio'
 import { loadConfig } from '../config/index.js'
 import { registerNoteTools } from '../tools/note/index.js'
 import { registerRootsTools } from '../tools/roots/index.js'
@@ -56,28 +56,41 @@ console.error(
   `  MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG=${config.auditLogMode}${config.auditLogMode === 'off' ? '' : ` (path: ${config.auditLogPath})`}`
 )
 
-const server = new McpServer({
-  name: 'mcp-ki-kb-notion-mirror',
-  version: '0.9.0'
-})
-server.registerTool = makeAccessGatedRegister(server, config.accessLevel, {
-  mode: config.auditLogMode,
-  path: config.auditLogPath,
-  maxBytes: config.auditLogMaxBytes,
-  keep: config.auditLogKeep
-})
+/**
+ * Per-connection server factory. `serveStdio` owns the era decision for the
+ * connection and pins exactly one instance from this factory for its lifetime,
+ * so every tool registration — and the access gate wrapped around it — must
+ * happen here rather than once at module scope.
+ */
+const createServer = (): McpServer => {
+  const server = new McpServer({
+    name: 'mcp-ki-kb-notion-mirror',
+    version: '0.9.0'
+  })
+  server.registerTool = makeAccessGatedRegister(server, config.accessLevel, {
+    mode: config.auditLogMode,
+    path: config.auditLogPath,
+    maxBytes: config.auditLogMaxBytes,
+    keep: config.auditLogKeep
+  })
 
-registerNoteTools(server, config)
-registerTreeTools(server, config, settings)
-registerRootsTools(server, config, settings)
-
-const main = async (): Promise<void> => {
-  const transport = new StdioServerTransport()
-  await server.connect(transport)
-  console.error(`mcp-ki-kb-notion-mirror ready`)
+  registerNoteTools(server, config)
+  registerTreeTools(server, config, settings)
+  registerRootsTools(server, config, settings)
+  return server
 }
 
-main().catch((err) => {
-  console.error('mcp-ki-kb-notion-mirror fatal:', err)
-  process.exit(1)
+// `legacy: 'serve'` is deliberate, not a default accepted by omission: a
+// 2025-era opening is still served from the same factory while sibling clients
+// finish migrating. scripts/smoke.ts asserts that fallback explicitly.
+const handle = serveStdio(createServer, {
+  legacy: 'serve',
+  onerror: (error) => console.error('mcp-ki-kb-notion-mirror stdio error:', error)
+})
+
+console.error(`mcp-ki-kb-notion-mirror ready`)
+
+process.on('SIGINT', async () => {
+  await handle.close()
+  process.exit(0)
 })

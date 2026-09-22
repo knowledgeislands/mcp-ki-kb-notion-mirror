@@ -4,6 +4,7 @@ import { errorResult, jsonResult } from './results.js'
 describe('errorResult', () => {
   it('builds the MCP error response shape with an "Error <action>: <message>" text', () => {
     expect(errorResult('publishing note', new Error('boom'))).toEqual({
+      resultType: 'complete',
       isError: true,
       content: [{ type: 'text', text: 'Error publishing note: boom' }]
     })
@@ -11,6 +12,7 @@ describe('errorResult', () => {
 
   it('stringifies a non-Error error value', () => {
     expect(errorResult('reading note status', 'kaboom')).toEqual({
+      resultType: 'complete',
       isError: true,
       content: [{ type: 'text', text: 'Error reading note status: kaboom' }]
     })
@@ -20,7 +22,12 @@ describe('errorResult', () => {
 describe('jsonResult', () => {
   it('serialises a payload to pretty JSON in a text block', () => {
     const r = jsonResult({ a: 1 })
+    expect(r.resultType).toBe('complete')
     expect(r.content[0]?.type).toBe('text')
     expect(JSON.parse(r.content[0]?.text ?? '')).toEqual({ a: 1 })
+  })
+
+  it('mirrors the payload into structuredContent', () => {
+    expect(jsonResult({ a: 1 }).structuredContent).toEqual({ a: 1 })
   })
 })

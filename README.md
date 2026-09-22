@@ -10,7 +10,7 @@ The KB is canonical; the Notion mirror is a derivative read surface for people w
 
 There is **no fixed root folder and no fixed wiki database**. Every mutation takes the `kb_path`/`subtree` and the `parent` it attaches under **per call** — so you can mirror any note or folder under any Notion parent.
 
-Conforms to the **MCP specification 2025-11-25**.
+Conforms to the **MCP specification 2026-07-28**.
 
 ## The verb model
 
