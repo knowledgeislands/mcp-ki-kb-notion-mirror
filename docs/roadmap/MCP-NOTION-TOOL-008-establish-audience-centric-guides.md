@@ -10,7 +10,7 @@ blocked_by: []
 transferred_from: ki-website
 baseline_ref: bffc063e1e0114b46296b4c59b51efbde53c62f4
 created_at: 2026-09-21T15:44:00Z
-updated_at: 2026-09-22T08:30:00Z
+updated_at: 2026-09-24T09:14:00Z
 ---
 
 ## Goal
@@ -27,7 +27,7 @@ KI Website now declares, for every page it publishes under `apps/site/src/guidan
 
 That is a pull, not an obligation: KI Website derives, it does not own. This repository decides what its guides say and when they change.
 
-Separately, `ki-guides` is being asked to require audience directories under `docs/guides/` rather than permitting a flat collection (`ki-agentic-harness` `KI-HARNESS-GOV-083`). If that lands, this repository's collection has to satisfy it.
+Separately, `KI-HARNESS-GOV-083` has clarified `ki-guides`: audience directories are recommended when stable reader groups make a collection easier to navigate, while flat and mixed collections remain valid. This item therefore stands on this repository's own readers and routing needs, not a universal Harness requirement.
 
 ## Boundary
 
@@ -111,7 +111,7 @@ The failure modes a troubleshooting guide has to cover already exist as literal 
 
 ## Dependencies / blocks
 
-Nothing blocks this. `KI-HARNESS-GOV-083` in `ki-agentic-harness` proposes making audience directories a `ki-guides` requirement: if it lands first this collection satisfies it by construction, and if it lands later this collection already conforms. KI Website intends to derive public guidance from these guides and cite them at a pinned ref, but it derives rather than owns and its schedule does not gate this work.
+Nothing blocks this. `KI-HARNESS-GOV-083` is advisory rather than a universal migration requirement; this item's audience grouping remains justified by the repository-local reader distinctions described above. KI Website intends to derive public guidance from these guides and cite them at a pinned ref, but it derives rather than owns and its schedule does not gate this work.
 
 ## Documentation impact
 
@@ -139,7 +139,7 @@ No further roadmap change is expected. If writing the guides exposes behaviour t
 
 `README.md` fell from 256 lines to 92. Every step-by-step sequence it carried moved out exactly once; what remains is orientation — what the server is, the verb model, the fourteen-tool inventory, a four-item summary of the conventions the tools rely on, and a documentation map. The three shaping decisions that constrain the result held: two audiences and no `operator/`, the tool inventory staying in the README as a capability catalogue rather than becoming a guide, and no release guide for a package with no release.
 
-### Summary of changes
+### Change Summary
 
 - `docs/guides/README.md` — collection index: scope, a route to each audience, and a pointer to `docs/decisions/` and `docs/roadmap/` for the material that is not a guide.
 - `docs/guides/user/README.md`, `docs/guides/developer/README.md` — audience indexes, each naming who it is for and routing to its guides.

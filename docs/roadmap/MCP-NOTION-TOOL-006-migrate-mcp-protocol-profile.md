@@ -9,7 +9,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 94dedce0352df6865fa3bc5dd3e397203b9ea3f1
 created_at: 2026-09-02T01:12:46Z
-updated_at: 2026-09-22T07:02:00Z
+updated_at: 2026-09-24T09:18:00Z
 ---
 
 ## Goal
@@ -111,7 +111,7 @@ Immutable baseline: `94dedce0352df6865fa3bc5dd3e397203b9ea3f1`. That baseline wa
 
 Resulting evidence: `c5fa84edabb9b6989c381554e88f369467c72caf`.
 
-### Summary of changes
+### Change Summary
 
 - `package.json`, `bun.lock` — `@modelcontextprotocol/sdk` `^1.30.0` replaced by `@modelcontextprotocol/server` `2.0.0` as a dependency; `@modelcontextprotocol/client` `2.0.0` added as a devDependency for the smoke boundary; `zod` relaxed from the exact `4.4.3` to `^4.6.5` and resolved at 4.6.5.
 - `.ki.toml` — the `ki-engineering` `dependency_holds` entry explaining the zod pin is removed, because the v1 SDK that caused it is gone.
