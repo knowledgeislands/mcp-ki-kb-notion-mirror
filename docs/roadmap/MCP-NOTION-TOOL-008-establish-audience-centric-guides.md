@@ -4,13 +4,13 @@ title: Establish audience-centric guides
 area: TOOL
 theme: tool-surface
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 transferred_from: ki-website
 baseline_ref: bffc063e1e0114b46296b4c59b51efbde53c62f4
 created_at: 2026-09-21T15:44:00Z
-updated_at: 2026-09-26T17:35:30Z
+updated_at: 2026-09-26T18:10:52Z
 ---
 
 ## Goal
@@ -193,6 +193,10 @@ The `operator/` rejection is the decision most likely to be revisited. It holds 
 ### Mini recap
 
 A repository with no guides and a 256-line README that mixed a specification with a manual now has a gated `docs/guides/` collection, two audiences, nine files, and a 92-line README that orients rather than instructs. All three audits pass, the full audit is up from 15 skills to 16, and the code gates are untouched.
+
+## Done
+
+Accepted 2026-09-26 by Kris Brown on the review packet above.
 
 ## Discussion
 

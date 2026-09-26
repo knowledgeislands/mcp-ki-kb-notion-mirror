@@ -4,12 +4,12 @@ area: TOOL
 title: Migrate MCP protocol profile
 theme: tool-surface
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 94dedce0352df6865fa3bc5dd3e397203b9ea3f1
 created_at: 2026-09-02T01:12:46Z
-updated_at: 2026-09-24T09:18:00Z
+updated_at: 2026-09-26T18:10:52Z
 ---
 
 ## Goal
@@ -168,6 +168,10 @@ Proposed learning routes, none promoted automatically:
 - The smoke boundary is where this migration earned its confidence. The source audit deliberately cannot see discovery, era negotiation or envelope validity, so the pattern of asserting them in a live round-trip is the transferable part for the remaining legacy siblings.
 - A dependency hold is a claim with an owner and an expiry. This one outlived its cause by exactly as long as it took someone to notice; holds are worth re-reading whenever the dependency they constrain is replaced.
 - Whether this fleet keeps `legacy: 'serve'` is a fleet-level question, not a per-repository one. It deserves a single decision once enough siblings have migrated, rather than five independent judgements.
+
+## Done
+
+Accepted 2026-09-26 by Kris Brown on the review packet above.
 
 ## Discussion
 
