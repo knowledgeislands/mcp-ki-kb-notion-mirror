@@ -68,11 +68,13 @@
   "homepage": "https://github.com/knowledgeislands/mcp-ki-kb-notion-mirror#readme",
   "keywords": [
     "anthropic",
+    "bun",
     "claude",
     "knowledge-base",
     "mcp",
     "model-context-protocol",
-    "notion"
+    "notion",
+    "typescript"
   ],
   "license": "MIT",
   "lint-staged": {
