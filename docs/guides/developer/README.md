@@ -5,4 +5,6 @@
 
 This package is consumed from a local checkout. There is no publish step, no release workflow, and therefore no release guide.
 
-For the architectural invariants a change has to respect — configuration injection, the stdout discipline, the annotation-driven access gate, and why frontmatter is edited by line surgery — read [`CLAUDE.md`](../../../CLAUDE.md). [`AGENTS.md`](../../../AGENTS.md) holds the short standing conventions.
+The procedures in this collection are self-contained. [Local development](local-development.md) and [Definition of done](definition-of-done.md) state the actionable configuration-injection, stdout, access-gate, and frontmatter-editing constraints.
+
+Root `AGENTS.md` and `CLAUDE.md` remain the repository-wide governance for agents; this collection does not duplicate that authority.

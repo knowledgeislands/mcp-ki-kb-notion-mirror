@@ -10,7 +10,7 @@ blocked_by: []
 transferred_from: ki-website
 baseline_ref: bffc063e1e0114b46296b4c59b51efbde53c62f4
 created_at: 2026-09-21T15:44:00Z
-updated_at: 2026-09-24T09:14:00Z
+updated_at: 2026-09-26T17:35:30Z
 ---
 
 ## Goal
@@ -152,6 +152,8 @@ No further roadmap change is expected. If writing the guides exposes behaviour t
 - `README.md` — reduced to orientation; moved sections deleted, model sections replaced by a summary plus a link, documentation map added.
 - `CONTRIBUTING.md` — one link repointed from the now-removed `README.md#setup` anchor to the installation guide.
 - `.ki.toml` — `[skills.ki-guides]` declared with no keys, matching the exemplar repositories.
+- Review remediation removed outbound Markdown-document links from `docs/guides/README.md` and `docs/guides/developer/README.md`. Required procedure remains in sibling guides; root `README.md`, `AGENTS.md`, `CLAUDE.md`, `docs/decisions/`, and `docs/roadmap/` are named without making the collection depend on them.
+- Root `README.md` and `AGENTS.md` already link inward to the guide collection, so no root-document change was needed.
 
 ### Verification
 
@@ -164,6 +166,13 @@ No further roadmap change is expected. If writing the guides exposes behaviour t
 - `bun run test` → `Test Files  19 passed (19)` / `Tests  289 passed (289)`, unchanged from the baseline this item started at.
 
 The authoring audit failed once during the work, reporting `[MD049] Emphasis use _ instead of *` in the troubleshooting guide and `[MD051] Link fragment 'setup' not found in './README.md'` in `CONTRIBUTING.md` — the second being real breakage caused by deleting the README's Setup section. Both were fixed and the audit re-run clean.
+
+#### GUIDE-4 review remediation
+
+- The exact outbound-document predicate over `docs/guides/` returned no matches.
+- `ki repo audit --skill ki-guides --repo . --concise --progress never` → `summary: KI REPO AUDIT on mcp-ki-kb-notion-mirror PASS · 1 skill`.
+- `ki repo audit --skill ki-authoring --repo . --concise --progress never` → `FAIL=0 WARN=1`; the sole warning is pre-existing `.rumdl.toml` template drift (`OWN-1`), with no authored-Markdown finding.
+- Runtime tests and builds were not repeated because remediation changes only guides and this review record; the original runtime evidence above remains applicable.
 
 ### Outstanding concerns
 
