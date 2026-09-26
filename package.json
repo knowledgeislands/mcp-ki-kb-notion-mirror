@@ -7,9 +7,6 @@
     "mcp-ki-kb-notion-mirror": "dist/mcp-server/index.js",
     "mcp-ki-kb-notion-mirror-publish": "dist/cli/cli.js"
   },
-  "bugs": {
-    "url": "https://github.com/knowledgeislands/mcp-ki-kb-notion-mirror/issues"
-  },
   "dependencies": {
     "@modelcontextprotocol/server": "2.1.0",
     "@tryfabric/martian": "^1.2.4",
