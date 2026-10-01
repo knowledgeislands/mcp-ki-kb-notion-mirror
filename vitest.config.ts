@@ -5,6 +5,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['src/**/*.test.ts'],
+    exclude: ['**/*.live.test.ts', '**/node_modules/**'],
     fileParallelism: false,
     // No env seeding needed: config is loaded explicitly via loadConfig() and
     // passed into calls, so nothing reads process.env at import time. Tests

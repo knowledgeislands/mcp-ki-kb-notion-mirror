@@ -12,6 +12,7 @@ Use this checklist before presenting a change to this server for review.
 - Frontmatter edits stay line surgery rather than a YAML round-trip, so field order and formatting outside the mirror fields survive unchanged.
 - The Notion token reaches no log, error message, or tool output.
 - Tests use isolated fixtures and mocks. A live Notion call requires explicit authority.
+- The separately invoked `self:test:live` command requires a dedicated token, explicit opt-in, disposable page and database parents, and operator authority for each run. Its existence is not live API evidence; see [Local development](local-development.md#deliberate-live-notion-smoke-test).
 - A change to the tool surface updates `EXPECTED_TOOLS` in `scripts/smoke.ts` and the three registration sites together.
 - Affected documentation moves with the change: the README's verb model and tool inventory, the [user guides](../user/README.md), and any decision record or roadmap item the change resolves.
 

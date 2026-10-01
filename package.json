@@ -101,6 +101,7 @@
     "ki:server:mcp:start": "bun run build && node dist/mcp-server/index.js",
     "ki:test:smoke": "bun run build && bun scripts/smoke.ts",
     "prepare": "husky",
+    "self:test:live": "vitest run --config vitest.live.config.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest"

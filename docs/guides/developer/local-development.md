@@ -53,6 +53,22 @@ This builds, boots the server over stdio, and asserts the fourteen-tool wire sur
 
 Tests are co-located with the code they cover. Fixtures are isolated and Notion is mocked; a live Notion call from a test needs explicit authority.
 
+## Deliberate live Notion smoke test
+
+`bun run test` and `bun run test:coverage` exclude `*.live.test.ts` and use mocked Notion calls. `bun run self:test:live` is a separate command. Its gate fails before creating a client, fixture, or temporary directory unless every dedicated setting is present:
+
+```bash
+KI_NOTION_LIVE_RUN=yes-i-am-using-disposable-parents \
+KI_NOTION_LIVE_TOKEN=<dedicated-test-token> \
+KI_NOTION_LIVE_PAGE_PARENT_ID=<disposable-page-id> \
+KI_NOTION_LIVE_DATABASE_PARENT_ID=<disposable-database-id> \
+bun run self:test:live
+```
+
+The operator must separately authorise each run, provide an integration token with read, insert, and update rights, and share two distinct **disposable** parents with that integration. Use a test workspace, not an existing KB note or production parent. An ordinary mirror token in the environment does not satisfy this gate. The suite creates a temporary synthetic Greek note, uniquely named remote pages beneath the supplied parents, and then exercises touch, update, status/get, delete, and cross-parent-type move detection. It reports whether Notion rejects the move, silently ignores it, or supports it, based on observed state.
+
+The suite archives only page IDs it created and removes its local temporary directory. It never archives either supplied parent. If cleanup fails, the error lists residual created page IDs for manual recovery, without a token or note body. Review those IDs in the disposable workspace before retrying. Offline checks of the gate and cleanup do not establish live Notion behaviour; record a live result only after an explicitly authorised run.
+
 ## Verify
 
 Before handing a change over, run the gate in [Definition of done](definition-of-done.md). While iterating, `bun run test:watch` and `bunx tsc --noEmit` are the fast loop.

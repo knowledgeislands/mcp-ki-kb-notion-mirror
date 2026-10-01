@@ -21,6 +21,7 @@ Conforms to the **MCP specification 2026-07-28**.
 - **[What the mirror owns](docs/guides/user/what-the-mirror-owns.md)** — the fields it writes into your notes and everything it refuses to touch. Worth reading before the first publish.
 - **[Troubleshoot the mirror](docs/guides/user/troubleshooting.md)** — what each failure means and how to recover.
 - **[Developer guides](docs/guides/developer/README.md)** — running from source and the delivery gate.
+- **[Deliberate live test](docs/guides/developer/local-development.md#deliberate-live-notion-smoke-test)** — separate opt-in command and disposable fixture requirements for maintainers.
 
 ## The verb model
 

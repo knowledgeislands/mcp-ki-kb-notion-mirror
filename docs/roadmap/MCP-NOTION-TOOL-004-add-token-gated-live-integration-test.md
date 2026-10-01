@@ -4,12 +4,12 @@ area: TOOL
 title: Add gated integration test
 theme: tool-surface
 horizon: next
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: bd5e662e9016cb652f8ca6cc7944f923ee165bf9
 created_at: 2026-07-29T00:37:05Z
-updated_at: 2026-10-01T19:30:08Z
+updated_at: 2026-10-01T21:12:00Z
 ---
 
 ## Goal
@@ -30,17 +30,17 @@ Implement a separately invoked, skipped-by-default suite and its safety-gate tes
 
 ## Steps
 
-- [ ] Add a dedicated live-test configuration and `test:live` script. Exclude `*.live.test.ts` from the normal unit/coverage configuration so a developer's environment cannot silently change those commands into network tests.
-- [ ] Require an explicit opt-in flag, a dedicated test token, and caller-supplied disposable page and database parent IDs. Validate the complete input before creating clients or fixtures; missing prerequisites make the explicit live command fail clearly with zero HTTP requests. Ordinary suites must not inspect production token values.
-- [ ] Build synthetic Greek local fixtures in an OS temporary directory and create uniquely named remote pages only beneath the nominated disposable parents. Track every created page ID in memory for cleanup; never enumerate a workspace or modify/archive either caller-supplied parent.
-- [ ] Exercise touch, update, status/get, and delete against a created test note and test cross-parent-type move detection on a created page. Record whether Notion rejects the move, silently ignores it and is caught, or now supports it; only report success when observed postconditions and the client result agree.
-- [ ] Use try/finally cleanup to archive only pages created in this run, remove local temporary files, and report cleanup failures with residual page IDs but no token, request headers, or note content. Do not let cleanup hide the original test failure.
-- [ ] Add offline tests for incomplete gate inputs, opt-in absence, fixture ownership, partial setup failure, and cleanup failure using mocks. Document invocation, fixture-parent prerequisites, expected skipped/default behaviour, and explicit operator responsibility for each live run.
+- [x] Add a dedicated live-test configuration and `self:test:live` script. Exclude `*.live.test.ts` from the normal unit/coverage configuration so a developer's environment cannot silently change those commands into network tests.
+- [x] Require an explicit opt-in flag, a dedicated test token, and caller-supplied disposable page and database parent IDs. Validate the complete input before creating clients or fixtures; missing prerequisites make the explicit live command fail clearly with zero HTTP requests. Ordinary suites must not inspect production token values.
+- [x] Build synthetic Greek local fixtures in an OS temporary directory and create uniquely named remote pages only beneath the nominated disposable parents. Track every created page ID in memory for cleanup; never enumerate a workspace or modify/archive either caller-supplied parent.
+- [x] Exercise touch, update, status/get, and delete against a created test note and test cross-parent-type move detection on a created page. Record whether Notion rejects the move, silently ignores it and is caught, or now supports it; only report success when observed postconditions and the client result agree.
+- [x] Use try/finally cleanup to archive only pages created in this run, remove local temporary files, and report cleanup failures with residual page IDs but no token, request headers, or note content. Do not let cleanup hide the original test failure.
+- [x] Add offline tests for incomplete gate inputs, opt-in absence, fixture ownership, partial setup failure, and cleanup failure using mocks. Document invocation, fixture-parent prerequisites, expected skipped/default behaviour, and explicit operator responsibility for each live run.
 
 ## Files touched
 
 - [vitest.config.ts](../../vitest.config.ts), a dedicated `vitest.live.config.ts`, and [package.json](../../package.json).
-- A focused `src/main/notes/*.live.test.ts` suite plus a test-only fixture/gate helper with offline tests, kept outside product runtime exports.
+- A focused `tests/live/*.live.test.ts` suite plus a test-only fixture/gate helper and offline tests, kept outside product runtime exports.
 - [The local development guide](../guides/developer/local-development.md), [definition of done](../guides/developer/definition-of-done.md), and [README.md](../../README.md) only for navigation to the documented opt-in command.
 
 ## Verify
@@ -71,6 +71,32 @@ Document setup, explicit invocation, cleanup limits, and the distinction between
 ### Roadmap
 
 This item delivers the test harness; later live runs record actual evidence and do not imply acceptance of other product items.
+
+## Review
+
+### Delivered
+
+Implemented the gated live Notion test harness for MCP-NOTION-TOOL-004 at baseline `bd5e662e9016cb652f8ca6cc7944f923ee165bf9`. The live API suite remains unrun because this delivery did not authorise a live workspace call.
+
+### Change Summary
+
+Added a separate `self:test:live` Vitest configuration, an explicit complete-input gate, synthetic temporary note and owned-page fixtures, cross-parent move outcome checks, safe cleanup, offline tests, and maintainer guidance. The command uses the repository-owned `self:` namespace required by the engineering audit; this is the only deviation from the original draft script name.
+
+### Verification
+
+`bunx tsc --noEmit`, `bun run test`, `bun run test:coverage` (100% product coverage), `bun run build`, and `bun run ki:test:smoke` passed sequentially. In isolated child runs with HTTP calls denied and an ambient production-looking token, ordinary tests and coverage passed; the explicit live command failed at the opt-in gate, and then at incomplete dedicated settings, without an HTTP attempt. Offline tests cover gate inputs and owned-page cleanup. Focused `ki-engineering`, `ki-repo-mcp`, `ki-work-roadmap`, `ki-guides`, and `ki-authoring` audits passed. `git diff --check` passed.
+
+### Outstanding concerns
+
+No live Notion behaviour has been verified. An authorised operator must supply a dedicated token and disposable page/database parents for a separate run, then inspect any residual created page IDs reported by cleanup. This is an execution prerequisite for live evidence, not a gap in the offline harness delivery.
+
+### Post-change review
+
+The normal suite cannot discover the live file, while the separate command requires deliberate opt-in before fixture creation. Cleanup tracks only pages created by this run, and the move result requires an observed postcondition. The changed files stay within the approved harness and documentation boundary.
+
+### Mini recap
+
+The test harness is ready for owner review; offline and repository checks passed. Its live result remains unknown until an explicitly authorised run.
 
 ## Discussion
 
