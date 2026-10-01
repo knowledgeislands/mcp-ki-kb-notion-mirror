@@ -9,12 +9,12 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-07-29T00:37:05Z
-updated_at: 2026-08-18T13:19:48Z
+updated_at: 2026-10-01T19:27:46Z
 ---
 
 ## Goal
 
-Achieve the stated outcome: Build image upload pipeline.
+Images stored beside a Knowledge Base note appear faithfully in its Notion mirror, and changed image bytes are detected without unnecessary repeated uploads.
 
 ## Context
 
@@ -22,7 +22,7 @@ Resolve `<Note> - images/` siblings, upload each file through `POST /v1/file_upl
 
 ## Boundary
 
-Keep the work limited to the stated surface.
+Handle confined local sibling assets in the existing note-mirroring workflow. Do not grant arbitrary filesystem access, change the source authority of the KB, or silently bundle a broad Notion API-version migration; the remaining persistence, size and rendering choices below must be resolved before Ready.
 
 ## Current state
 
@@ -87,6 +87,12 @@ Update the README with the image-upload behaviour and any new configuration.
 
 No additional roadmap impact.
 
+## Remaining readiness decisions
+
+The repository pins `notionApiVersion` to `2022-06-28` in [configuration](../../src/config/index.ts). Current [Notion upload guidance](https://developers.notion.com/guides/data-apis/uploading-small-files) describes create, multipart send, and attach using newer API-version examples. It confirms that an attached upload ID may be reused, but does not establish compatibility of that whole flow with this repository's pinned version. Resolve that compatibility with authoritative evidence before approving implementation; do not bundle a broad API upgrade into the image item silently.
+
+A complete Ready plan also needs a durable uploaded-asset identity/cache owner, byte-based change-detection semantics independent of transient upload IDs, a safe policy for stale/missing cached assets, finite count/size budgets, and a precise sibling-directory grammar. The [note diff plan](MCP-NOTION-TOOL-002-add-note-diff.md) establishes a pure render seam; image rendering must preserve its no-upload preview contract and account for the existing `baselineNote` path as well as `updateNote`. These decisions are unresolved, rather than tasks to discover after declaring Ready.
+
 ## Discussion
 
 ### Upload contract is unsettled
@@ -104,3 +110,7 @@ The content hash is the load-bearing skip mechanism and it currently sees only t
 ### Budgets
 
 A note can reference arbitrarily many arbitrarily large files. The upload path is the first place in this server where user content size drives network cost, so a count and size budget is likely needed; whether it is a config knob or a fixed constant is open.
+
+### Readiness review
+
+Primary-source review resolves the earlier uncertainty about reuse after first attachment. It does not settle the older pinned API version or this repository’s cache, byte-hash, budget, and preview contracts. Keep Next / draft while those boundaries are designed; do not represent an implementation plan with unresolved authority and persistence choices as Ready.
