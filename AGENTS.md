@@ -24,7 +24,7 @@ Targets the MCP specification **2025-11-25** (the workspace MCP standard's track
 
 Mirrors KB markdown notes into Notion and writes the resulting page URL back into each note's frontmatter. Three resources of tools, all wire-prefixed `kb_notion_mirror_`:
 
-- **`note`** (`kb_notion_mirror_note_*`) — act on one `kb_path` under a caller-supplied Notion `parent`. File-aware but layout-agnostic: no directory walking, no parent resolution.
+- **`note`** (`kb_notion_mirror_note_*`) — act on one `kb_path` under a caller-supplied Notion `parent` when the verb needs one. File-aware but layout-agnostic: no directory walking, no parent resolution.
 - **`tree`** (`kb_notion_mirror_tree_*`) — walk a caller-supplied `subtree` folder under `cfg.kbRoot`, apply the folder-index hierarchy convention, and attach the subtree-root under a caller-supplied `parent`. Built on the note verbs.
 - **`roots`** (`kb_notion_mirror_roots_list`) — pure discovery of folders declared as mirror roots (`kb_notion_mirror_root` frontmatter) → `[{ subtree, parent }]`. The client (or CLI) drives the `tree` verbs per root; the server never does a frontmatter-driven batch mutation.
 
@@ -32,7 +32,7 @@ There is **no fixed root folder and no fixed wiki database**. The `subtree`/`kb_
 
 ### The verb model (the core idea)
 
-Verbs: `get` · `status` · `preflight` · `touch` · `update` · `move` · `delete`, plus the tree-only `prune`. `note` has all seven; `tree` has all but `get`/`move`, and adds `prune`; `roots` has only `list`.
+Verbs: `get` · `status` · `preflight` · `diff` · `touch` · `update` · `move` · `delete`, plus the tree-only `prune`. `note` has all eight; `tree` has all but `get`/`diff`/`move`, and adds `prune`; `roots` has only `list`.
 
 **Mirroring is two-phase — there is no `create`.** `touch` creates a body-less scaffold (title + icon + banner + the page's place in the child-pages hierarchy) so the page URL becomes known; `update` then pushes the body and resolves `[[wikilinks]]` into `@`mentions, and **requires a prior touch** (it throws otherwise). This guarantees every link target exists before any body renders, so the order is always touch-all → update-all. `tree_update` accepts an optional `link_map` so the CLI can resolve cross-root mentions with one map spanning every root. Two verbs default to `dry_run: true` — `delete` (archiving breaks inbound `@`mentions) and the git-driven `tree_prune` (it archives pages whose backing note was deleted) — so both preview by default and only mutate when `dry_run` is explicitly `false`.
 
@@ -78,9 +78,9 @@ The MCP speaks JSON-RPC over stdout, so nothing reachable from a tool may write 
 
 ### Naming convention
 
-Tool names follow `<app>_<resource>_<action>` (snake*case) with `<app>` = `kb_notion_mirror` — the historical repo-derived stem, kept as-is across the `ki-` package rename since the tool prefix, frontmatter prefix (`kb_notion_mirror*_`), and env prefix (`MCP*KB_NOTION_MIRROR*_`) are a separate, unchanged naming scheme. Plural resource for collection ops, singular for single-item ops. Surface (14 tools):
+Tool names follow `<app>_<resource>_<action>` (snake*case) with `<app>` = `kb_notion_mirror` — the historical repo-derived stem, kept as-is across the `ki-` package rename since the tool prefix, frontmatter prefix (`kb_notion_mirror*_`), and env prefix (`MCP*KB_NOTION_MIRROR*_`) are a separate, unchanged naming scheme. Plural resource for collection ops, singular for single-item ops. Surface (15 tools):
 
-- `note` (single-item): `kb_notion_mirror_note_{get,status,preflight,touch,update,move,delete}` — [src/tools/note/index.ts](./src/tools/note/index.ts).
+- `note` (single-item): `kb_notion_mirror_note_{get,status,preflight,diff,touch,update,move,delete}` — [src/tools/note/index.ts](./src/tools/note/index.ts).
 - `tree` (single subtree): `kb_notion_mirror_tree_{status,preflight,touch,update,delete,prune}` — [src/tools/tree/index.ts](./src/tools/tree/index.ts).
 - `roots` (collection): `kb_notion_mirror_roots_list` — [src/tools/roots/index.ts](./src/tools/roots/index.ts).
 
@@ -115,8 +115,8 @@ This server holds a Notion token, reads user-supplied paths, and writes back to 
 - **Test fixtures use a synthetic Greek scheme** (`Alpha`/`Beta`/`Gamma`, roots `Alpha`/`Omega`) — never real KB or repo names. New tests must follow this.
 - Real Notion API calls are out of tests — the client is exercised through `fetch` mocks (`vi.stubGlobal('fetch', …)`). `main/trees/index.test.ts` uses a small stateful fetch stub (records each created page's parent so the cross-parent-type guard doesn't false-fire).
 - Config is injected, so tests build a `Config`/`MirrorSettings` literal and pass it. A couple of modules keep process-lifetime caches (title-property cache, audit-log append queue) — their tests use the exported reset hook.
-- `bun run ki:test:smoke` boots the built server over stdio and asserts the 14-tool wire surface. Keep `scripts/smoke.ts` `EXPECTED_TOOLS` in sync with the three registration sites.
+- `bun run ki:test:smoke` boots the built server over stdio and asserts the 15-tool wire surface. Keep `scripts/smoke.ts` `EXPECTED_TOOLS` in sync with the three registration sites.
 
 ## Tool registration call sites
 
-Tools are registered in [src/tools/note/index.ts](./src/tools/note/index.ts), [src/tools/tree/index.ts](./src/tools/tree/index.ts), and [src/tools/roots/index.ts](./src/tools/roots/index.ts). To survey the surface, `grep -r "registerTool" src/tools`. README's [Tools](./README.md#tools) section tabulates all 14 with purposes and I/O shapes.
+Tools are registered in [src/tools/note/index.ts](./src/tools/note/index.ts), [src/tools/tree/index.ts](./src/tools/tree/index.ts), and [src/tools/roots/index.ts](./src/tools/roots/index.ts). To survey the surface, `grep -r "registerTool" src/tools`. README's [Tools](./README.md#tools) section tabulates all 15 with purposes and I/O shapes.

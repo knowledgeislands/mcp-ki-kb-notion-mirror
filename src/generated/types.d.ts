@@ -7,6 +7,16 @@ import type { CallResult } from 'mcporter';
 
 export interface HnrMcpKiKbNotionMirrorTools {
   /**
+   * Read the local note and live Notion page, then compare the rendered authored body and the title,
+   * parent, and supplied icon without writing. Generated banner, managed footer, and child-page
+   * blocks are excluded and counted. Traversal errors beyond 1,000 authored blocks,
+   * 10,000 fetched blocks, or depth 32.
+   *
+   * @param params Proposed update inputs: kb_path, parent, optional icon and link_map.
+   */
+  kb_notion_mirror_note_diff(params: { kb_path: string; parent: unknown; icon?: unknown; link_map?: Record<string, unknown> }): Promise<CallResult>;
+
+  /**
    * Fetch the live Notion page referenced by a note's kb_notion_mirror_url. Pure read — no Notion
    * mutation, no file change.
    * Args:
@@ -287,4 +297,3 @@ export interface HnrMcpKiKbNotionMirrorTools {
    */
   kb_notion_mirror_roots_list(): Promise<CallResult>;
 }
-

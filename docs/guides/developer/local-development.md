@@ -41,7 +41,7 @@ The built server has its own end-to-end check:
 bun run ki:test:smoke
 ```
 
-This builds, boots the server over stdio, and asserts the fourteen-tool wire surface. Adding or renaming a tool means updating `EXPECTED_TOOLS` in `scripts/smoke.ts` to match the three registration sites, and the smoke test failing is how you find out you forgot.
+This builds, boots the server over stdio, and asserts the fifteen-tool wire surface. Adding or renaming a tool means updating `EXPECTED_TOOLS` in `scripts/smoke.ts` to match the three registration sites, and the smoke test failing is how you find out you forgot.
 
 ## Where things live
 

@@ -48,9 +48,9 @@ Restart the client. A variable set in that `env` block always wins over anything
 
 | Level | Tools registered |
 | ------------- | ---------------------------------------------------------- |
-| `read` | the six read verbs: every `_get` / `_status` / `_preflight`, and `_roots_list` |
-| `write` | the above + every `_touch` / `_update`, and `_note_move` — eleven in total |
-| `destructive` | the above + `_note_delete`, `_tree_delete`, and `_tree_prune` — all fourteen |
+| `read` | the seven read verbs: `_note_diff`, every `_get` / `_status` / `_preflight`, and `_roots_list` |
+| `write` | the above + every `_touch` / `_update`, and `_note_move` — twelve in total |
+| `destructive` | the above + `_note_delete`, `_tree_delete`, and `_tree_prune` — all fifteen |
 
 The gate reads each tool's MCP annotations rather than its name, and an unannotated tool is treated as destructive rather than assumed safe. The default is `write`, because mutating the mirror is the server's whole purpose; set `read` while you are exploring a knowledge base you do not want changed, and `destructive` only when you intend to archive pages.
 
@@ -96,7 +96,7 @@ mcp-ki-kb-notion-mirror-publish roots list
 
 `roots list` reads your knowledge base and reports each declared root with the Notion parent it attaches under. An empty result means no folder index carries `kb_notion_mirror_root` yet — see [Mirror a knowledge base](mirroring-a-knowledge-base.md).
 
-From an MCP client, ask it to list the server's tools. At the default `write` level you should see eleven of the fourteen; `kb_notion_mirror_note_delete`, `kb_notion_mirror_tree_delete`, and `kb_notion_mirror_tree_prune` appear only at `destructive`.
+From an MCP client, ask it to list the server's tools. At the default `write` level you should see twelve of the fifteen; `kb_notion_mirror_note_delete`, `kb_notion_mirror_tree_delete`, and `kb_notion_mirror_tree_prune` appear only at `destructive`.
 
 If any of this fails, [Troubleshoot the mirror](troubleshooting.md) covers every error these steps can produce.
 

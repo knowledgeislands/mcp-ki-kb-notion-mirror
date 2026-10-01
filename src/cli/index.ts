@@ -1,6 +1,6 @@
 /**
  * Public library surface, mirroring the resource modules under src/main:
- *   - note verbs  (main/notes)   — get/status/preflight/touch/update/move/delete
+ *   - note verbs  (main/notes)   — get/status/preflight/diff/touch/update/move/delete
  *   - tree verbs  (main/trees)   — statusTree/preflightTree/touchTree/updateTree/deleteTree
  *   - roots       (main/roots)   — listRoots/discoverRoots
  * plus the walk settings and the discover/order/resolve primitives.

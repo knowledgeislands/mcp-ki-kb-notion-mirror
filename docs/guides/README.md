@@ -13,6 +13,6 @@ A guide answers how. The neighbouring documentation roots answer the other quest
 
 - `docs/decisions/` answer why, for the structural choices this repository has made.
 - `docs/roadmap/` answer when, covering behaviour that is planned rather than delivered.
-- `README.md` is the capability catalogue: the verb model and the fourteen tools, with what each one returns.
+- `README.md` is the capability catalogue: the verb model and the fifteen tools, with what each one returns.
 - `mcp-ki-kb-notion-mirror-publish` with no arguments prints the complete CLI usage, including every flag. These guides explain the sequences and the choices between them; they do not repeat every option.
 - `CLAUDE.md` and `AGENTS.md` hold the standing conventions for working in this repository.

@@ -43,11 +43,12 @@ Each resource shares one verb set (the `note`/`tree` columns show where a verb e
 
 ## Tools
 
-Fourteen tools across the three resources. `note` (7):
+Fifteen tools across the three resources. `note` (8):
 
 - **`kb_notion_mirror_note_get(kb_path)`** — read. Live Notion page state, or `{ exists: false, reason: "not-mirrored" }`.
 - **`kb_notion_mirror_note_status(kb_path)`** — read. `{ published, url?, published_at? }` from frontmatter; no Notion call.
 - **`kb_notion_mirror_note_preflight(kb_path)`** — read. `{ ok, issues }`; no Notion call.
+- **`kb_notion_mirror_note_diff(kb_path, parent, icon?, link_map?)`** — read. Compare rendered local body with the live page; ordered insertions/deletions, metadata changes, and generated-region exclusions. No writes; errors on unsupported or over-budget blocks.
 - **`kb_notion_mirror_note_touch(kb_path, parent, icon?)`** — write. Scaffold + write URL back. Idempotent → `{ skipped: true, existing_url }` when already mirrored, else `{ url, page_id, published_at }`.
 - **`kb_notion_mirror_note_update(kb_path, parent, icon?, link_map?)`** — write. Body push + wikilink resolution; `{ url, page_id, updated_at }`. Errors if not touched first.
 - **`kb_notion_mirror_note_move(kb_path, parent)`** — write. `{ moved: true, page_id, previous_parent, new_parent }`.
@@ -67,7 +68,7 @@ Tree verbs return `{ eligible, outcomes: NoteOutcome[] }` where `NoteOutcome` is
 
 - **`kb_notion_mirror_roots_list()`** — read. `[{ subtree, indexKbPath, parent }]`.
 
-Which of the fourteen are registered depends on the configured access level; the three destructive tools are absent unless you ask for them. See [Install and configure the mirror](docs/guides/user/installation.md).
+Which of the fifteen are registered depends on the configured access level; the three destructive tools are absent unless you ask for them. See [Install and configure the mirror](docs/guides/user/installation.md).
 
 ## Conventions it relies on
 

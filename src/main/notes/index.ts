@@ -1,5 +1,5 @@
 /**
- * The note verbs — get / status / preflight / touch / update / move / delete —
+ * The note verbs — get / status / preflight / diff / touch / update / move / delete —
  * as pipeline functions. The tool handlers (src/tools/note/index.ts) are thin
  * wrappers that validate args, call one of these, and map the result/throw to an
  * MCP envelope. Keeping the logic here (not in the excluded aggregator) makes
@@ -39,10 +39,13 @@ import { bannerBlock } from './banner.js'
 import { refreshFooter } from './footer.js'
 import { removeFrontmatterFields, upsertFrontmatterFields } from './frontmatter.js'
 import { computeBodyHash } from './hash.js'
-import { bodyToBlocks, titleFromPath } from './markdown.js'
+import { titleFromPath } from './markdown.js'
 import { readFullNote, readNoteFrontmatter } from './read.js'
+import { renderNoteBody } from './render.js'
 import { getDatabaseTitleProperty } from './title-property.js'
-import { convertMentionPlaceholders, rewriteWikilinks } from './wikilinks.js'
+
+export type { DiffResult } from './diff.js'
+export { diffNote } from './diff.js'
 
 /**
  * The frontmatter fields the mirror owns:
@@ -221,8 +224,7 @@ export const updateNote = async (
   const title = titleFromPath(abs)
   // Resolve wikilinks on the stripped body, then turn the mention placeholders
   // martian carried through into real page mentions.
-  const rewritten = rewriteWikilinks(body, options.linkMap ?? {})
-  const bodyBlocks = convertMentionPlaceholders(bodyToBlocks(rewritten)) as unknown[]
+  const bodyBlocks = renderNoteBody(body, options.linkMap)
 
   // Zero-call skip: if nothing that determines the push (body, title, icon,
   // parent) has changed since the last mirror, don't touch Notion at all.
@@ -288,8 +290,7 @@ export const baselineNote = async (
   if (!existing) return { skipped: true, reason: 'not-mirrored' }
 
   const title = titleFromPath(abs)
-  const rewritten = rewriteWikilinks(body, options.linkMap ?? {})
-  const bodyBlocks = convertMentionPlaceholders(bodyToBlocks(rewritten)) as unknown[]
+  const bodyBlocks = renderNoteBody(body, options.linkMap)
   const hash = computeBodyHash({ blocks: bodyBlocks, title, icon: options.icon, parent })
   const publishedAt = options.publishedAt ?? normalizePublishedAt(new Date().toISOString())
   await atomicWriteFile(

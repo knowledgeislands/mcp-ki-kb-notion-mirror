@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/server'
 import { z } from 'zod'
 import type { Config } from '../../config/index.js'
+import { diffNote } from '../../main/notes/diff.js'
 import {
   deleteNote,
   getNote,
@@ -61,6 +62,43 @@ const deleteInput = z
   })
   .strict()
 
+const diffInput = z
+  .object({ kb_path: kbPathArg, parent: parentArg, icon: iconArg.optional(), link_map: linkMapArg.optional() })
+  .strict()
+
+const canonicalBlockOutput = z.object({ type: z.string(), payload: z.json() }).strict()
+const diffOutput = z.union([
+  z.object({ status: z.literal('not-mirrored'), reason: z.literal('not-mirrored') }).strict(),
+  z
+    .object({
+      status: z.literal('compared'),
+      page_id: z.string(),
+      url: z.string(),
+      identical: z.boolean(),
+      body_changes: z.array(
+        z
+          .object({
+            kind: z.enum(['insert', 'delete']),
+            old_position: z.number().int().nullable(),
+            new_position: z.number().int().nullable(),
+            block: canonicalBlockOutput
+          })
+          .strict()
+      ),
+      metadata_changes: z.array(
+        z
+          .object({
+            field: z.enum(['title', 'parent', 'icon']),
+            current: z.json(),
+            proposed: z.json()
+          })
+          .strict()
+      ),
+      excluded_generated: z.object({ banner: z.boolean(), footer: z.boolean(), child_pages: z.number().int() }).strict()
+    })
+    .strict()
+])
+
 const notionParent = z.record(z.string(), z.unknown())
 
 const getNoteOutput = z.union([
@@ -109,6 +147,29 @@ const deleteNoteOutput = z.union([
 ])
 
 export const registerNoteTools = (server: McpServer, cfg: Config): void => {
+  server.registerTool(
+    'kb_notion_mirror_note_diff',
+    {
+      title: 'Preview a note mirror update against its live page',
+      description: `Read the local note and live Notion page, then compare the rendered authored body and the title, parent, and supplied icon without writing. Requires the proposed parent, as update does. Generated leading banner, managed child-pages footer, and child-page blocks are excluded and counted. Body changes are ordered insertions/deletions of canonical blocks; an edit is one of each. Traversal stops with an error beyond 1,000 authored blocks, 10,000 fetched blocks, or depth 32, or for unsupported blocks. An unmirrored note returns { status: "not-mirrored", reason: "not-mirrored" } without a Notion request.`,
+      inputSchema: diffInput,
+      outputSchema: diffOutput,
+      annotations: READ_ONLY_REMOTE
+    },
+    async ({ kb_path, parent, icon, link_map }) => {
+      try {
+        return jsonResult(
+          await diffNote(cfg, kb_path, parent as NotionParent, {
+            icon: icon as NotionIcon | undefined,
+            linkMap: link_map
+          })
+        )
+      } catch (err) {
+        return errorResult('diffing note mirror', err)
+      }
+    }
+  )
+
   server.registerTool(
     'kb_notion_mirror_note_delete',
     {

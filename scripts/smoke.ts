@@ -25,6 +25,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/client/stdio'
 // src/tools/{note,tree,roots}/index.ts and the access-level tests.
 // Add a tool → update both.
 const EXPECTED_TOOLS = [
+  'kb_notion_mirror_note_diff',
   'kb_notion_mirror_note_get',
   'kb_notion_mirror_note_status',
   'kb_notion_mirror_note_preflight',

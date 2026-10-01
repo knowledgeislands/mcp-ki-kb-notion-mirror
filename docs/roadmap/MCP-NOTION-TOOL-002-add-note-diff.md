@@ -4,12 +4,12 @@ area: TOOL
 title: Add KB note diff
 theme: tool-surface
 horizon: next
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: bb9a98331217d0951e7eec3041552d62cf290baf
 created_at: 2026-07-29T00:37:05Z
-updated_at: 2026-10-01T19:30:08Z
+updated_at: 2026-10-01T22:15:27Z
 ---
 
 ## Goal
@@ -30,14 +30,14 @@ Add the read-only `kb_notion_mirror_note_diff` tool and matching `note diff` CLI
 
 ## Steps
 
-- [ ] Factor pure local rendering into one helper consumed by update, baseline, and diff. Keep existing output and hash behaviour identical for existing notes; the helper must perform no remote or local write.
-- [ ] Define a strict diff result schema containing page identity, `identical`, ordered body changes with old/new positions and canonical block payloads, metadata changes, and excluded generated-region information. An unmirrored note returns an explicit `not-mirrored` result without any Notion request.
-- [ ] Fetch the current page and recursively fetch the paginated children required for comparison. Bound the traversal to 1,000 authored blocks and depth 32; reject an over-budget or unsupported representation explicitly rather than claim an incomplete comparison is identical.
-- [ ] Canonicalise local and remote blocks by write-relevant type payload, nested children, rich-text content, link targets, annotations, and mention target identity. Remove only known server metadata and normalise known default values; never remove nested mention IDs as though they were block IDs. Preserve unknown content as an explicit comparison limitation rather than dropping it.
-- [ ] Use a deterministic longest-common-subsequence comparison of canonical top-level body blocks, treating nested content as part of its parent block. Report insertions and deletions; a changed block is one removal plus one insertion, so no identity-based changed classification is implied. Keep early insertions from producing a false cascade of changed blocks.
-- [ ] Recognise the managed banner only in its leading position and the managed footer through the existing sentinel/child-page convention. Do not drop an arbitrary authored callout or heading because its type resembles generated content. Report title/icon/parent differences separately and document the generated-region exclusion.
-- [ ] Register the new tool with `READ_ONLY_REMOTE` through the access gate, expose matching CLI dispatch and library export, and update smoke expectations to fifteen tools without changing the modern/legacy protocol contract.
-- [ ] Add fixture-backed comparisons for identical, inserted, removed, edited, reordered, nested, paginated, and unmirrored content; preserve existing update/baseline hash tests. Document the result and limitations.
+- [x] Factor pure local rendering into one helper consumed by update, baseline, and diff. Keep existing output and hash behaviour identical for existing notes; the helper must perform no remote or local write.
+- [x] Define a strict diff result schema containing page identity, `identical`, ordered body changes with old/new positions and canonical block payloads, metadata changes, and excluded generated-region information. An unmirrored note returns an explicit `not-mirrored` result without any Notion request.
+- [x] Fetch the current page and recursively fetch the paginated children required for comparison. Bound the traversal to 1,000 authored blocks and depth 32; reject an over-budget or unsupported representation explicitly rather than claim an incomplete comparison is identical.
+- [x] Canonicalise local and remote blocks by write-relevant type payload, nested children, rich-text content, link targets, annotations, and mention target identity. Remove only known server metadata and normalise known default values; never remove nested mention IDs as though they were block IDs. Preserve unknown content as an explicit comparison limitation rather than dropping it.
+- [x] Use a deterministic longest-common-subsequence comparison of canonical top-level body blocks, treating nested content as part of its parent block. Report insertions and deletions; a changed block is one removal plus one insertion, so no identity-based changed classification is implied. Keep early insertions from producing a false cascade of changed blocks.
+- [x] Recognise the managed banner only in its leading position and the managed footer through the existing sentinel/child-page convention. Do not drop an arbitrary authored callout or heading because its type resembles generated content. Report title/icon/parent differences separately and document the generated-region exclusion.
+- [x] Register the new tool with `READ_ONLY_REMOTE` through the access gate, expose matching CLI dispatch and library export, and update smoke expectations to fifteen tools without changing the modern/legacy protocol contract.
+- [x] Add fixture-backed comparisons for identical, inserted, removed, edited, reordered, nested, paginated, and unmirrored content; preserve existing update/baseline hash tests. Document the result and limitations.
 
 ## Files touched
 
@@ -75,6 +75,32 @@ Extend the verb model and mirroring guide with diff output, metadata comparison,
 ### Roadmap
 
 The image pipeline must build on the resulting render representation; it remains separately scoped.
+
+## Review
+
+### Delivered
+
+Added a read-only KB note diff from baseline `bb9a98331217d0951e7eec3041552d62cf290baf`. The MCP tool and `note diff` CLI verb compare the update-rendered local body with the live Notion page and return ordered body and separate metadata changes.
+
+### Change Summary
+
+Update, baseline, and diff now share one pure body renderer. The comparison recursively reads paginated remote blocks, canonicalises write-relevant content, and uses a deterministic longest-common-subsequence diff. It recognises only an exact leading generated banner and the managed child-page footer, reports those exclusions, normalises parent UUID spelling, and errors on unsupported or incomplete data. Traversal caps are 1,000 authored blocks, 10,000 fetched blocks, and depth 32. Tool schema, generated client methods, CLI, smoke inventory, README, and guides are aligned.
+
+### Verification
+
+The full test suite and coverage gate passed at 100% statements, branches, functions, and lines. Focused fixtures cover identical, inserted, removed, edited, reordered, nested, paginated, generated-region, unsupported, over-budget, and unmirrored cases. Tests verify only GET requests and no note write or rename. TypeScript, build, smoke, and repository audits are the final gates before commit.
+
+### Outstanding concerns
+
+The comparison covers the current page snapshot; a concurrent Notion edit after the read can change a later update result. Unsupported block types and over-budget pages return errors rather than a possibly false `identical`. The 10,000 fetched-block cap also bounds pages dominated by generated child pages. No live Notion account was used for this diff test.
+
+### Post-change review
+
+The existing update zero-call hash skip and baseline behavior remain covered by their prior tests. An early insertion produces one insertion, nested children remain part of their parent block, mention target IDs are retained, and similar authored callouts/headings are not discarded. The tool is visible at read access with strict input and result schemas.
+
+### Mini recap
+
+The scoped implementation and fixture verification are complete locally. No Git remote was pushed. This item remains Awaiting review until owner acceptance of this packet.
 
 ## Discussion
 

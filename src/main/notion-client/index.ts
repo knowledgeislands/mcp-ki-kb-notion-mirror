@@ -152,6 +152,7 @@ interface NotionPageResponse {
   archived: boolean
   parent: Record<string, unknown>
   properties: Record<string, unknown>
+  icon?: NotionIcon | null
 }
 
 export interface CreatedPage {
@@ -254,6 +255,7 @@ export interface FetchedPage {
   last_edited_time: string
   archived: boolean
   title: string
+  icon?: NotionIcon | null
 }
 
 interface NotionRichText {
@@ -285,7 +287,8 @@ export const getPage = async (cfg: NotionConfig, pageId: string): Promise<Fetche
     created_time: page.created_time,
     last_edited_time: page.last_edited_time,
     archived: page.archived,
-    title: titleOf(page.properties)
+    title: titleOf(page.properties),
+    ...(page.icon === undefined ? {} : { icon: page.icon })
   }
 }
 
@@ -310,7 +313,11 @@ interface BlockChildrenPage {
  * All immediate children of a block/page, following pagination (Notion returns
  * 100 per page). Returns the blocks in Notion's natural (creation) order.
  */
-export const getBlockChildren = async (cfg: NotionConfig, blockId: string): Promise<NotionBlock[]> => {
+export const getBlockChildren = async (
+  cfg: NotionConfig,
+  blockId: string,
+  maxResults = Number.POSITIVE_INFINITY
+): Promise<NotionBlock[]> => {
   const id = normalizeId(blockId)
   const all: NotionBlock[] = []
   let cursor: string | null = null
@@ -318,6 +325,8 @@ export const getBlockChildren = async (cfg: NotionConfig, blockId: string): Prom
     const qs = cursor ? `?page_size=100&start_cursor=${encodeURIComponent(cursor)}` : '?page_size=100'
     const page: BlockChildrenPage = await request<BlockChildrenPage>(cfg, 'GET', `/v1/blocks/${id}/children${qs}`)
     all.push(...page.results)
+    if (all.length > maxResults) throw new Error(`Notion block comparison exceeds the ${maxResults}-block budget.`)
+    if (page.has_more && !page.next_cursor) throw new Error('Notion block pagination has_more without a cursor.')
     cursor = page.has_more ? page.next_cursor : null
   } while (cursor)
   return all

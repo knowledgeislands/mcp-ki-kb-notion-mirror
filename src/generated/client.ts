@@ -24,6 +24,12 @@ export async function createHnrMcpKiKbNotionMirrorClient(options: CreateClientOp
   const ownsRuntime = !options.runtime;
   const proxy = createServerProxy(runtime, "hnr-mcp-ki-kb-notion-mirror");
   const client: HnrMcpKiKbNotionMirrorClient = {
+    async kb_notion_mirror_note_diff(params: Parameters<HnrMcpKiKbNotionMirrorTools["kb_notion_mirror_note_diff"]>[0]) {
+      const tool = proxy.kbNotionMirrorNoteDiff as (args: Parameters<HnrMcpKiKbNotionMirrorTools["kb_notion_mirror_note_diff"]>[0]) => Promise<unknown>;
+      const raw = await tool(params);
+      return wrapCallResult(raw).callResult;
+    },
+
     async kb_notion_mirror_note_get(params: Parameters<HnrMcpKiKbNotionMirrorTools["kb_notion_mirror_note_get"]>[0]) {
       const tool = proxy.kbNotionMirrorNoteGet as (args: Parameters<HnrMcpKiKbNotionMirrorTools["kb_notion_mirror_note_get"]>[0]) => Promise<unknown>;
       const raw = await tool(params);
@@ -116,4 +122,3 @@ export async function createHnrMcpKiKbNotionMirrorClient(options: CreateClientOp
   };
   return client;
 }
-

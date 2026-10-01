@@ -10,7 +10,7 @@
  * library layer never writes to stdout/stderr.
  *
  * The surface mirrors the MCP tools:
- *   note  get|status|preflight|touch|update|move|delete  <kbPath>  [--parent-…]
+ *   note  get|status|preflight|diff|touch|update|move|delete  <kbPath>  [--parent-…]
  *   tree  status|preflight|touch|update|delete           <subtree> [--parent-…] [--note <kbPath>]
  *   roots list|touch|update|publish|delete                          [--dry-run]
  *
@@ -27,6 +27,7 @@ import {
   buildLinkMap,
   deleteNote,
   deleteTree,
+  diffNote,
   discover,
   getNote,
   listRoots,
@@ -65,12 +66,12 @@ tryLoadEnvFile(path.join(PACKAGE_ROOT, '.env'))
 
 const USAGE = `Usage: mcp-ki-kb-notion-mirror-publish <resource> <verb> [args] [flags]
 
-note  <verb> <kbPath>   verbs: get | status | preflight | touch | update | move | delete
+note  <verb> <kbPath>   verbs: get | status | preflight | diff | touch | update | move | delete
 tree  <verb> <subtree>  verbs: status | preflight | touch | update | delete | prune | baseline
 roots <verb>            verbs: list | touch | update | publish | delete | prune | baseline
 
 Flags:
-  --parent-db <id>    Notion wiki database parent (note/tree touch|update, note move)
+  --parent-db <id>    Notion wiki database parent (note diff|touch|update|move, tree touch|update)
   --parent-page <id>  Notion page parent (same verbs)
   --note <kbPath>     restrict a tree op to one note's ancestor chain
   --dry-run           delete/prune only: report what would be archived without touching Notion
@@ -163,6 +164,8 @@ const runNote = async (verb: string, kbPath: string, argv: string[], dryRun: boo
   switch (verb) {
     case 'get':
       return json(await getNote(cfg, kbPath))
+    case 'diff':
+      return json(await diffNote(cfg, kbPath, parentFromFlags(argv)))
     case 'touch':
       return json(await touchNote(cfg, kbPath, parentFromFlags(argv)))
     case 'update':
