@@ -4,12 +4,12 @@ area: TOOL
 title: Add gated integration test
 theme: tool-surface
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: bd5e662e9016cb652f8ca6cc7944f923ee165bf9
 created_at: 2026-07-29T00:37:05Z
-updated_at: 2026-10-01T21:12:00Z
+updated_at: 2026-10-02T02:20:58Z
 ---
 
 ## Goal
@@ -97,6 +97,10 @@ The normal suite cannot discover the live file, while the separate command requi
 ### Mini recap
 
 The test harness is ready for owner review; offline and repository checks passed. Its live result remains unknown until an explicitly authorised run.
+
+## Done
+
+Accepted 2026-10-02 by Kris Brown on the review packet above.
 
 ## Discussion
 

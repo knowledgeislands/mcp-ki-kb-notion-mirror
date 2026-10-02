@@ -4,12 +4,12 @@ area: TOOL
 title: Add KB note diff
 theme: tool-surface
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: bb9a98331217d0951e7eec3041552d62cf290baf
 created_at: 2026-07-29T00:37:05Z
-updated_at: 2026-10-01T22:15:27Z
+updated_at: 2026-10-02T02:20:58Z
 ---
 
 ## Goal
@@ -101,6 +101,10 @@ The existing update zero-call hash skip and baseline behavior remain covered by 
 ### Mini recap
 
 The scoped implementation and fixture verification are complete locally. No Git remote was pushed. This item remains Awaiting review until owner acceptance of this packet.
+
+## Done
+
+Accepted 2026-10-02 by Kris Brown on the review packet above.
 
 ## Discussion
 
