@@ -9,7 +9,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-07-29T00:37:05Z
-updated_at: 2026-10-01T19:27:46Z
+updated_at: 2026-10-02T02:30:02Z
 ---
 
 ## Goal
@@ -67,7 +67,7 @@ No tool is added or removed, so `src/tools/`, `src/cli/`, and `scripts/smoke.ts`
 
 ## Dependencies / blocks
 
-This item is neither blocked by nor blocking another item. It shares the `updateNote` render path with [MCP-NOTION-TOOL-002](MCP-NOTION-TOOL-002-add-note-diff.md); whichever lands second inherits the other's shape of that path, and the diff item's render/compare split is the more convenient order if both are scheduled together.
+This item is neither blocked by nor blocking another item. It shares the `updateNote` render path with the delivered note-diff implementation in [`src/main/notes/`](../../src/main/notes/); image rendering must preserve that pure render/compare split.
 
 ## Documentation impact
 
@@ -91,7 +91,7 @@ No additional roadmap impact.
 
 The repository pins `notionApiVersion` to `2022-06-28` in [configuration](../../src/config/index.ts). Current [Notion upload guidance](https://developers.notion.com/guides/data-apis/uploading-small-files) describes create, multipart send, and attach using newer API-version examples. It confirms that an attached upload ID may be reused, but does not establish compatibility of that whole flow with this repository's pinned version. Resolve that compatibility with authoritative evidence before approving implementation; do not bundle a broad API upgrade into the image item silently.
 
-A complete Ready plan also needs a durable uploaded-asset identity/cache owner, byte-based change-detection semantics independent of transient upload IDs, a safe policy for stale/missing cached assets, finite count/size budgets, and a precise sibling-directory grammar. The [note diff plan](MCP-NOTION-TOOL-002-add-note-diff.md) establishes a pure render seam; image rendering must preserve its no-upload preview contract and account for the existing `baselineNote` path as well as `updateNote`. These decisions are unresolved, rather than tasks to discover after declaring Ready.
+A complete Ready plan also needs a durable uploaded-asset identity/cache owner, byte-based change-detection semantics independent of transient upload IDs, a safe policy for stale/missing cached assets, finite count/size budgets, and a precise sibling-directory grammar. The delivered [`renderNoteBody`](../../src/main/notes/render.ts) seam requires image rendering to preserve its no-upload preview contract and account for the existing `baselineNote` path as well as `updateNote`. These decisions are unresolved, rather than tasks to discover after declaring Ready.
 
 ## Discussion
 
