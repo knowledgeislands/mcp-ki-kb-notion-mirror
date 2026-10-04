@@ -83,7 +83,7 @@ mcp-ki-kb-notion-mirror-publish roots list                 # every declared root
 mcp-ki-kb-notion-mirror-publish roots publish              # touch everything, then update everything
 ```
 
-`--dry-run` applies to `delete` and `prune` only. It is accepted and silently ignored on every other verb, so `roots publish --dry-run` performs a real publish. To see what a publish would cover without writing anything, use `roots list` and `tree status`, which make no Notion call.
+`--dry-run` previews `delete` and `prune` only. On a verb that writes but has no preview - `touch`, `update`, `move`, `publish` and `baseline` - the CLI refuses the flag: it prints an error, exits with status 2 and changes nothing, so `roots publish --dry-run` can never perform a real publish. Read-only verbs such as `list` and `status` accept the flag and are unaffected. To see what a publish would cover without writing anything, use `roots list` and `tree status`, which make no Notion call.
 
 `roots publish` is the only place the cross-root sequence lives. It touches every declared root, then updates them all with a single link map spanning every root, so a `[[wikilink]]` that points from one root into another resolves to a real mention. Where a bare name exists in more than one root, the local root's note wins.
 

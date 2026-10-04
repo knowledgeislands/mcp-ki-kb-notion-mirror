@@ -22,6 +22,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { loadConfig, loadKbRoot } from '../config/index.js'
 import type { NotionParent } from '../main/notion-client/index.js'
+import { unsupportedDryRunError } from './dry-run.js'
 import {
   baselineTree,
   buildLinkMap,
@@ -74,7 +75,8 @@ Flags:
   --parent-db <id>    Notion wiki database parent (note diff|touch|update|move, tree touch|update)
   --parent-page <id>  Notion page parent (same verbs)
   --note <kbPath>     restrict a tree op to one note's ancestor chain
-  --dry-run           delete/prune only: report what would be archived without touching Notion
+  --dry-run           delete/prune only: report what would be archived without touching Notion;
+                      refused on touch/update/move/publish/baseline, which have no preview
   --force             update only: push every note even when its content hash is unchanged
   --verify            update only: read each page's last-edit time and re-push any edited in Notion since last mirror
   --skip <kbPath>     baseline only: leave this note unstamped (repeatable)
@@ -311,6 +313,12 @@ const main = async (): Promise<void> => {
   }
   if (!verb) {
     console.error(`${resource} needs a verb\n\n${USAGE}`)
+    process.exit(2)
+  }
+  // Refuse a --dry-run the verb cannot honour before any config load or Notion call.
+  const dryRunRefusal = unsupportedDryRunError(resource, verb, dryRun)
+  if (dryRunRefusal) {
+    console.error(dryRunRefusal)
     process.exit(2)
   }
 

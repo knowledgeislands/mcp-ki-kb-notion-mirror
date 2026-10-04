@@ -66,7 +66,7 @@ These exit with status 2 and print the full usage:
 - **`this verb requires --parent-db <id> or --parent-page <id>`** — a mutation needs its Notion parent explicitly. Parents are never read from the environment.
 - **`note <verb> requires a <kbPath>`**, **`tree <verb> requires a <subtree>`**, **`Unknown note verb: …`**, **`Unknown resource: …`** — check the spelling against `mcp-ki-kb-notion-mirror-publish` with no arguments, which prints every verb and flag.
 
-Note that `--dry-run` is honoured by `delete` and `prune` only. It is accepted and ignored elsewhere, so it offers no protection on a publish.
+**`--dry-run is not supported for "<resource> <verb>"`** also exits with status 2, without the usage text. `--dry-run` previews `delete` and `prune` only; on `touch`, `update`, `move`, `publish` and `baseline` there is no preview, so the CLI refuses the flag before loading configuration and nothing is changed. Drop the flag only when you mean to write.
 
 ## Something changed in Notion and came back
 

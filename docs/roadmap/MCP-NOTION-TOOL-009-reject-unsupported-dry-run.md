@@ -4,12 +4,12 @@ area: TOOL
 title: Reject unsupported dry-run
 theme: tool-surface
 horizon: next
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: d9447cfd4386dcaa48e4962774f2390a40b423d9
 created_at: 2026-10-04T10:40:05Z
-updated_at: 2026-10-04T11:55:29Z
+updated_at: 2026-10-04T12:02:07Z
 ---
 
 ## Goal
@@ -30,10 +30,10 @@ At `8028488`, `main()` in `src/cli/cli.ts` sets `dryRun` from any `--dry-run` ar
 
 ## Steps
 
-- [ ] Reproduce the ignored flag with a mocked CLI invocation and synthetic roots; count touch/update calls without any real token or workspace.
-- [ ] Enumerate supported resource/verb combinations from the dispatcher. Explicit `--dry-run` on a mutating verb without a preview contract must be rejected before mutation-capable orchestration.
-- [ ] Preserve delete/prune previews and existing defaults. Do not silently introduce dry-run semantics for touch/update/publish/baseline or relabel mutating tools read-only.
-- [ ] Add fixture tests for unsupported publish, other affected mutation verbs, supported preview verbs, and invocations without the flag; update CLI usage and owning operator guidance.
+- [x] Reproduce the ignored flag with a mocked CLI invocation and synthetic roots; count touch/update calls without any real token or workspace.
+- [x] Enumerate supported resource/verb combinations from the dispatcher. Explicit `--dry-run` on a mutating verb without a preview contract must be rejected before mutation-capable orchestration.
+- [x] Preserve delete/prune previews and existing defaults. Do not silently introduce dry-run semantics for touch/update/publish/baseline or relabel mutating tools read-only.
+- [x] Add fixture tests for unsupported publish, other affected mutation verbs, supported preview verbs, and invocations without the flag; update CLI usage and owning operator guidance.
 
 ## Files touched
 
@@ -64,6 +64,44 @@ Update the user guides that describe CLI publication and dry-run previews.
 ### Roadmap
 
 No additional roadmap impact.
+
+## Review
+
+### Delivered
+
+The publish CLI now refuses `--dry-run` on every verb that writes but has no preview (`note touch|update|move`, `tree touch|update|baseline`, `roots touch|update|publish|baseline`). The refusal happens in `main()` immediately after argument parsing, before configuration loading, Notion client construction or any orchestration, and exits with status 2 and a message stating that nothing was changed. `delete`/`prune` previews, read-only verbs and invocations without the flag are unchanged. The MCP tool surface is untouched.
+
+### Change Summary
+
+- `src/cli/dry-run.ts` (new): the explicit preview and no-preview verb tables and `unsupportedDryRunError(resource, verb, dryRun)`.
+- `src/cli/cli.ts`: calls the guard before dispatch; usage text states where the flag is refused.
+- `src/cli/dry-run.test.ts` (new): refused verbs, accepted previews, read-only verbs, unknown verbs and no-flag cases.
+- `src/cli/cli.test.ts` (new): child-process tests of the real CLI with a dummy token and a non-existent KB root, asserting exit 2, the refusal message and empty stdout for `roots publish|update`, `tree baseline` and `note touch`, and that `roots prune --dry-run` is not refused.
+- `docs/guides/user/mirroring-a-knowledge-base.md` and `docs/guides/user/troubleshooting.md`: replace the "accepted and silently ignored" warning with the refusal behaviour.
+
+### Verification
+
+- `bunx vitest run src/cli`: 29 tests pass.
+- `bun run test:coverage`: 24 files, 356 tests pass; statements, branches, functions and lines 100%.
+- `bunx tsc --noEmit -p .`, `bun run build`, `bun run ki:test:smoke` (15 tools, valid envelope): pass.
+- `bunx biome check .`: 11 warnings and 1 info, all pre-existing and unchanged by this work.
+- `bunx knip`: only the pre-existing configuration hints.
+- `ki repo audit --repo .`: no FAIL.
+- No live Notion call, token or workspace was used; the subprocess tests pin dummy environment values that the CLI's optional `.env.local` loading never overrides, so a regression would fail on configuration rather than reach Notion.
+
+### Outstanding concerns
+
+- Verb tables are maintained by hand beside the dispatcher; a new mutating verb must be added to `MUTATING_WITHOUT_PREVIEW`, otherwise the flag would again be ignored for it. The co-located tests make the current set explicit.
+- Unknown resource/verb combinations with `--dry-run` fall through to the existing dispatcher error, which already exits 2 with usage.
+- Users of the CLI need a release to receive the change.
+
+### Post-change review
+
+The guard is a pure function with no I/O, invoked once before any side effect, so the zero-mutation property holds by construction rather than by mocking each orchestrator. Exit status 2 matches the CLI's existing convention for a rejected command line.
+
+### Mini recap
+
+`--dry-run` can no longer turn into a real publish: the CLI rejects it, with nothing changed, on every verb that lacks a preview, while existing previews keep working.
 
 ## Discussion
 
