@@ -4,12 +4,12 @@ area: TOOL
 title: Reject unsupported dry-run
 theme: tool-surface
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: d9447cfd4386dcaa48e4962774f2390a40b423d9
 created_at: 2026-10-04T10:40:05Z
-updated_at: 2026-10-04T12:02:07Z
+updated_at: 2026-10-04T12:06:13Z
 ---
 
 ## Goal
@@ -102,6 +102,10 @@ The guard is a pure function with no I/O, invoked once before any side effect, s
 ### Mini recap
 
 `--dry-run` can no longer turn into a real publish: the CLI rejects it, with nothing changed, on every verb that lacks a preview, while existing previews keep working.
+
+## Done
+
+Accepted 2026-10-04 on the review packet above, under the owner's delegated estate-push authority following an independent Fable review, which returned ACCEPT: the refusal runs before any configuration load, the verb tables match the dispatcher exactly, the change is CLI-only, and typecheck, tests and 100% coverage pass. Advisory notes retained: the `src/cli/cli.ts` header comment predates `prune`/`baseline` and implies `--dry-run` on every roots verb; a test could tie the verb tables to `USAGE`; `cli.test.ts` assumes `bun` on `PATH`.
 
 ## Discussion
 
