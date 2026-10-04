@@ -9,7 +9,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-07-29T00:37:05Z
-updated_at: 2026-10-04T10:57:19Z
+updated_at: 2026-10-04T21:45:00Z
 ---
 
 ## Goal
@@ -112,3 +112,9 @@ Frontmatter travels with a note and reuses existing atomic-write machinery, but 
 ### Readiness review
 
 Keep Next / draft until the cache owner and concrete persistence, stable byte-hash, preview, baseline and recovery semantics are reviewed. The proposed budgets and grammar above are bounded planning recommendations. Existing registration-order audit warnings are unrelated to image behaviour and are not an inferred image defect.
+
+### Question for Kris (2026-10-04)
+
+Should uploaded-asset identities live (A) in a fourth generated frontmatter field `kb_notion_mirror_assets` in canonical KB notes, expanding the mirror's three-field write contract, or (B) in an external rebuildable generated-state cache under the XDG state directory beside `audit.jsonl`, keyed by canonical KB root and destination page, where cache loss means re-upload? The recommendation is B; please also accept the proposed budgets (PNG, JPEG, GIF and WebP; 16 assets per note, 5 MiB each, 20 MiB total) and byte-hash change detection as the Ready baseline, or name the values you want changed.
+
+Classified as an owner decision by the Fable reviewer under delegated autonomy (2026-10-04): either option alters the published note-ownership contract or the mirror's persistence footprint and failure modes, and this record already reserves the choice for the owner, so it falls outside reversible, low-risk delegation.
