@@ -9,7 +9,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-07-29T00:37:05Z
-updated_at: 2026-10-02T02:30:02Z
+updated_at: 2026-10-04T10:57:19Z
 ---
 
 ## Goal
@@ -22,7 +22,7 @@ Resolve `<Note> - images/` siblings, upload each file through `POST /v1/file_upl
 
 ## Boundary
 
-Handle confined local sibling assets in the existing note-mirroring workflow. Do not grant arbitrary filesystem access, change the source authority of the KB, or silently bundle a broad Notion API-version migration; the remaining persistence, size and rendering choices below must be resolved before Ready.
+Handle confined local sibling assets in the existing note-mirroring workflow. Do not grant arbitrary filesystem access, change the source authority of the KB, or silently bundle a broad Notion API-version migration; the remaining persistence, size and rendering choices below must be resolved before Ready. The API-version question has primary-source evidence; cache authority remains an owner decision.
 
 ## Current state
 
@@ -61,7 +61,7 @@ No tool is added or removed, so `src/tools/`, `src/cli/`, and `scripts/smoke.ts`
 
 1. `bun run test`
 2. `bun run test:coverage` — the 100% line/branch/function/statement gate stays green
-3. `bun run ki:test:smoke` — the 14-tool wire surface is unchanged
+3. `bun run ki:test:smoke` — the 15-tool wire surface is unchanged
 4. `ki repo audit --repo .`
 5. Tests prove that a reference outside the confined sibling directory is rejected, that no upload is attempted for a note whose content hash is unchanged, and that the Notion token never appears in an error path.
 
@@ -89,28 +89,26 @@ No additional roadmap impact.
 
 ## Remaining readiness decisions
 
-The repository pins `notionApiVersion` to `2022-06-28` in [configuration](../../src/config/index.ts). Current [Notion upload guidance](https://developers.notion.com/guides/data-apis/uploading-small-files) describes create, multipart send, and attach using newer API-version examples. It confirms that an attached upload ID may be reused, but does not establish compatibility of that whole flow with this repository's pinned version. Resolve that compatibility with authoritative evidence before approving implementation; do not bundle a broad API upgrade into the image item silently.
+The repository pins `notionApiVersion` to `2022-06-28`. The official [Notion versioning contract](https://developers.notion.com/reference/versioning), checked on 2026-10-04, states that additive endpoints and optional request parameters apply to every API version, including older versions. This resolves the prior documentation uncertainty about needing a broad version migration solely for uploads. The [small-file upload guide](https://developers.notion.com/guides/data-apis/uploading-small-files) specifies create, multipart send, then attach; upload IDs may be reused across blocks/pages and must first be attached within one hour. Verify these shapes through fetch mocks; no live upload is authorised by this planning pass.
 
-A complete Ready plan also needs a durable uploaded-asset identity/cache owner, byte-based change-detection semantics independent of transient upload IDs, a safe policy for stale/missing cached assets, finite count/size budgets, and a precise sibling-directory grammar. The delivered [`renderNoteBody`](../../src/main/notes/render.ts) seam requires image rendering to preserve its no-upload preview contract and account for the existing `baselineNote` path as well as `updateNote`. These decisions are unresolved, rather than tasks to discover after declaring Ready.
+The owner must choose the durable uploaded-asset cache boundary. Proposed option A is one generated scalar `kb_notion_mirror_assets` carrying a versioned, bounded JSON mapping of note-local paths and byte digests to successfully attached upload IDs, scoped to the destination page. This expands the current [three-field ownership contract](../../docs/guides/user/what-the-mirror-owns.md); the generic scalar frontmatter helper can represent it, but declared write authority does not presently permit it. Approval would require changing that contract, README, AGENTS guidance, cleanup field lists and exact round-trip tests. Do not implement this fourth field without explicit approval.
+
+Option B is a rebuildable external generated-state cache with atomic writes, restricted permissions, canonical KB-root and destination scoping, and no new field in canonical notes. This preserves the current note ownership boundary but adds storage configuration, cache-loss/re-upload behaviour and isolation tests. No cache location or option has yet been approved. Do not silently select either architecture during implementation.
+
+Proposed bounded asset policy: resolve only `<Note basename without .md> - images/` beside the note; use lexical and realpath containment for every member; support PNG, JPEG, GIF and WebP; limit each note to 16 distinct assets, 5 MiB per asset and 20 MiB total. These are proposed local safety budgets, not claims about every Notion workspace's upload limit. Validate all assets and budgets before network or local mutation.
+
+Proposed change detection: hash actual image bytes on each render/preview and use stable asset placeholders/digests in the body hash, never transient upload IDs. `renderNoteBody`, diff and baseline remain upload-free and cache-write-free. A push uploads changed or uncached assets before replacing the body, persists only successfully attached identities, and permits at most one bounded re-upload on a proven stale identity. Missing files, malformed cache state and upload failure must fail clearly rather than silently preserve a stale picture. The plan must explain baseline semantics and retry/idempotence before Ready.
 
 ## Discussion
 
-### Upload contract is unsettled
+### Upload request and reuse evidence
 
-This repo has never called an upload endpoint, so the request shape, the response fields to retain, and the lifetime of an uploaded asset are all unverified here. Treat every specific beyond the endpoint named in `Context` as an open decision to be confirmed against Notion's documentation for the pinned API version before implementation, not as settled design.
+The primary-source versioning and upload evidence above removes the old version-only blocker. An implementation still needs binary-capable requests alongside the JSON helper, inherited timeout/error handling and no token exposure. Preserve the pinned API version and avoid a bundled database/data-source migration.
 
-### Asset change detection
+### Cache ownership
 
-The content hash is the load-bearing skip mechanism and it currently sees only the rendered blocks. Whether to hash image bytes, file metadata, or a recorded upload identity is undecided, and the choice has a direct cost: hashing bytes means reading every referenced image on every publish, including runs that would otherwise make no Notion call at all.
-
-### Re-upload on every push
-
-`replaceBody` deletes and re-appends the whole non-child-page body on each update, so any image block is recreated too. Whether a previously uploaded asset can be referenced again by the new block, or must be re-uploaded, decides whether this pipeline is cheap or expensive at steady state. This needs answering early — it may change the answer to the previous topic.
-
-### Budgets
-
-A note can reference arbitrarily many arbitrarily large files. The upload path is the first place in this server where user content size drives network cost, so a count and size budget is likely needed; whether it is a config knob or a fixed constant is open.
+Frontmatter travels with a note and reuses existing atomic-write machinery, but broadens canonical metadata authority and adds Git churn and copy/rename semantics. External generated state avoids that write-authority change but requires root/destination isolation, permissions, atomic persistence and cache-loss recovery. The owner decision remains open.
 
 ### Readiness review
 
-Primary-source review resolves the earlier uncertainty about reuse after first attachment. It does not settle the older pinned API version or this repository’s cache, byte-hash, budget, and preview contracts. Keep Next / draft while those boundaries are designed; do not represent an implementation plan with unresolved authority and persistence choices as Ready.
+Keep Next / draft until the cache owner and concrete persistence, stable byte-hash, preview, baseline and recovery semantics are reviewed. The proposed budgets and grammar above are bounded planning recommendations. Existing registration-order audit warnings are unrelated to image behaviour and are not an inferred image defect.
