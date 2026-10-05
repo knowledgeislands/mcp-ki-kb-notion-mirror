@@ -22,7 +22,7 @@ Targets the MCP specification **2025-11-25** (the workspace MCP standard's track
 
 ## What this MCP does
 
-Mirrors KB markdown notes into Notion and writes the resulting page URL back into each note's frontmatter. Three resources of tools, all wire-prefixed `kb_notion_mirror_`:
+Mirrors KB markdown notes into Notion and writes the resulting page URL back into each note's frontmatter. Four resources of tools, all wire-prefixed `kb_notion_mirror_`:
 
 - **`note`** (`kb_notion_mirror_note_*`) — act on one `kb_path` under a caller-supplied Notion `parent` when the verb needs one. File-aware but layout-agnostic: no directory walking, no parent resolution.
 - **`tree`** (`kb_notion_mirror_tree_*`) — walk a caller-supplied `subtree` folder under `cfg.kbRoot`, apply the folder-index hierarchy convention, and attach the subtree-root under a caller-supplied `parent`. Built on the note verbs.
@@ -52,7 +52,7 @@ Run `bun run` with no args for the full script list.
 
 - **[src/config/index.ts](./src/config/index.ts)** — `loadConfig(env?) → Config`. Reads env (optionally hydrated from `.env.${NODE_ENV}`) into a plain `Config` value. **There is no module-level config singleton — nothing reads env at import time, and `config/` is the only place env is read.** The mirror-walk knobs (`MCP_KI_KB_NOTION_MIRROR_SKIP_*` / `…_ICON_BASE_URL`) parse here too, folded into `Config.mirror: MirrorSettings`; `loadMirrorSettings(env?)` is exported so the CLI's local-only verbs can read just that slice without requiring the token. `main/` takes the parsed slice as an argument — it never reads env itself. `notionApiBaseUrl` is validated as an `https:` URL (non-HTTPS / unparseable is rejected — SSRF / plaintext-downgrade discipline, since the Notion token rides as a Bearer header).
 - **[src/mcp-server/index.ts](./src/mcp-server/index.ts)** — the stdio MCP wrapper. Calls `loadConfig()` once, wires the access gate, and threads the `Config` into `registerNoteTools` → `registerTreeTools` → `registerRootsTools`. Excluded from coverage.
-- **[src/tools/](./src/tools/)** — MCP tool definitions only, one dir per resource (`note`, `tree`, `roots`). Thin: validate args (zod), confine paths, call a `main/`-or-`cli/` function, map result/throw to an MCP envelope via `jsonResult`/`errorResult`. `src/tools/**/index.ts` is excluded from coverage — never put logic there.
+- **[src/tools/](./src/tools/)** — MCP tool definitions only, one dir per resource (`note`, `tree`, `roots`, `backlinks`). Thin: validate args (zod), confine paths, call a `main/`-or-`cli/` function, map result/throw to an MCP envelope via `jsonResult`/`errorResult`. `src/tools/**/index.ts` is excluded from coverage — never put logic there.
 - **[src/main/](./src/main/)** — the implementation, mirroring the resources: `main/notes/` (the seven note verbs + banner, footer, wikilinks, markdown, frontmatter, title-property, and the `read.ts` reader split), `main/trees/` (walk/order/resolve in `discover.ts`, the tree verbs in `index.ts`, the git-driven `prune.ts`; `settings.ts` now just re-exports the `MirrorSettings` type — its env reader moved to `config/`), `main/roots/` (pruned discovery → `listRoots`), `main/notion-client/` (the HTTP layer). Every entry point takes `Config` (or its needed slice — e.g. the `MirrorSettings` walk slice) as its first argument.
 - **[src/cli/](./src/cli/)** — the operator surface (renamed from `orchestrator` for the common `main`/`cli` shape). `cli.ts` is the `mcp-ki-kb-notion-mirror-publish` bin — a `<resource> <verb>` dispatcher that does all human-readable printing; coverage-excluded. `index.ts` is the library barrel re-exporting `main/{notes,trees,roots}` + settings.
 - **[src/utils/](./src/utils/)** — cross-MCP helpers taking the specific config primitive they need (`resolveKbNotePath(kbRoot, kbPath)`, `withAuditLog(auditConfig, …)`, `makeAccessGatedRegister(server, accessLevel, audit)`). `notion-args.ts` holds the shared `parentArg`/`notionId` zod schemas; it and `annotations.ts` are pure data and coverage-excluded.
@@ -78,7 +78,7 @@ The MCP speaks JSON-RPC over stdout, so nothing reachable from a tool may write 
 
 ### Naming convention
 
-Tool names follow `<app>_<resource>_<action>` (snake*case) with `<app>` = `kb_notion_mirror` — the historical repo-derived stem, kept as-is across the `ki-` package rename since the tool prefix, frontmatter prefix (`kb_notion_mirror*_`), and env prefix (`MCP*KB_NOTION_MIRROR*_`) are a separate, unchanged naming scheme. Plural resource for collection ops, singular for single-item ops. Surface (15 tools):
+Tool names follow `<app>_<resource>_<action>` (snake*case) with `<app>` = `kb_notion_mirror` — the historical repo-derived stem, kept as-is across the `ki-` package rename since the tool prefix, frontmatter prefix (`kb_notion_mirror*_`), and env prefix (`MCP*KB_NOTION_MIRROR*_`) are a separate, unchanged naming scheme. Plural resource for collection ops, singular for single-item ops. Surface (17 tools):
 
 - `note` (single-item): `kb_notion_mirror_note_{get,status,preflight,diff,touch,update,move,delete}` — [src/tools/note/index.ts](./src/tools/note/index.ts).
 - `tree` (single subtree): `kb_notion_mirror_tree_{status,preflight,touch,update,delete,prune}` — [src/tools/tree/index.ts](./src/tools/tree/index.ts).
@@ -86,7 +86,7 @@ Tool names follow `<app>_<resource>_<action>` (snake*case) with `<app>` = `kb_no
 
 ### Access-level gate — driven by annotations, not names
 
-[src/utils/access-level.ts](./src/utils/access-level.ts) `makeAccessGatedRegister(server, accessLevel, audit)` derives each tool's level from `config.annotations`: `readOnlyHint:true → read`; `destructiveHint:true → destructive`; both explicitly `false → write`; anything else → `destructive` (fail-safe). A tool registers when its derived level is ≤ `cfg.accessLevel` (**default `write`**). Presets in [src/utils/annotations.ts](./src/utils/annotations.ts): `READ_ONLY_REMOTE` (get/status/preflight/roots_list), `WRITE_REMOTE_IDEMPOTENT` (touch/update/move — all reach an idempotent end state), `DESTRUCTIVE_REMOTE` (delete and tree_prune; both default to dry-run). `WRITE_REMOTE` (non-idempotent) is kept for completeness. Every tool is open-world (it calls Notion). New tools MUST set `annotations` to one of those presets.
+[src/utils/access-level.ts](./src/utils/access-level.ts) `makeAccessGatedRegister(server, accessLevel, audit)` derives each tool's level from `config.annotations`: `readOnlyHint:true → read`; `destructiveHint:true → destructive`; both explicitly `false → write`; anything else → `destructive` (fail-safe). A tool registers when its derived level is ≤ `cfg.accessLevel` (**default `write`**). Presets in [src/utils/annotations.ts](./src/utils/annotations.ts): `READ_ONLY_REMOTE` (get/status/preflight/roots_list), `WRITE_REMOTE_IDEMPOTENT` (touch/update/move — all reach an idempotent end state), `DESTRUCTIVE_REMOTE` (delete and tree_prune; both default to dry-run). `WRITE_REMOTE` (non-idempotent) is kept for completeness. Local backlinks use the closed-world `READ_ONLY` and `WRITE_IDEMPOTENT` presets; remote tools use the remote presets. New tools MUST set `annotations` to one of those presets.
 
 ### `move`/`update` and the cross-parent-type silent failure
 
@@ -94,7 +94,7 @@ Tool names follow `<app>_<resource>_<action>` (snake*case) with `<app>` = `kb_no
 
 ### Frontmatter is edited by line surgery, NOT a YAML round-trip
 
-[src/main/notes/frontmatter.ts](./src/main/notes/frontmatter.ts) regex-matches the leading block and edits per-line. A YAML library would reorder keys and rewrite escaping, corrupting the KB's strict field-order rules. Exact-string round-trip tests guard this — keep them green. The server writes back only `kb_notion_mirror_url` / `kb_notion_mirror_published_at` (`published_at` is set at `touch` — the name is kept for back-compat with frontmatter already in the KB).
+[src/main/notes/frontmatter.ts](./src/main/notes/frontmatter.ts) regex-matches the leading block and edits per-line. A YAML library would reorder keys and rewrite escaping, corrupting the KB's strict field-order rules. Exact-string round-trip tests guard this — keep them green. The server owns `kb_notion_mirror_url` / `kb_notion_mirror_published_at` / `kb_notion_mirror_hash` / `kb_notion_mirror_backlinks` (`published_at` is set at `touch` — the name is kept for back-compat with frontmatter already in the KB).
 
 ## Security Requirements
 
@@ -115,8 +115,12 @@ This server holds a Notion token, reads user-supplied paths, and writes back to 
 - **Test fixtures use a synthetic Greek scheme** (`Alpha`/`Beta`/`Gamma`, roots `Alpha`/`Omega`) — never real KB or repo names. New tests must follow this.
 - Real Notion API calls are out of tests — the client is exercised through `fetch` mocks (`vi.stubGlobal('fetch', …)`). `main/trees/index.test.ts` uses a small stateful fetch stub (records each created page's parent so the cross-parent-type guard doesn't false-fire).
 - Config is injected, so tests build a `Config`/`MirrorSettings` literal and pass it. A couple of modules keep process-lifetime caches (title-property cache, audit-log append queue) — their tests use the exported reset hook.
-- `bun run ki:test:smoke` boots the built server over stdio and asserts the 15-tool wire surface. Keep `scripts/smoke.ts` `EXPECTED_TOOLS` in sync with the three registration sites.
+- `bun run ki:test:smoke` boots the built server over stdio and asserts the 17-tool wire surface. Keep `scripts/smoke.ts` `EXPECTED_TOOLS` in sync with the four registration sites.
 
 ## Tool registration call sites
 
-Tools are registered in [src/tools/note/index.ts](./src/tools/note/index.ts), [src/tools/tree/index.ts](./src/tools/tree/index.ts), and [src/tools/roots/index.ts](./src/tools/roots/index.ts). To survey the surface, `grep -r "registerTool" src/tools`. README's [Tools](./README.md#tools) section tabulates all 15 with purposes and I/O shapes.
+Tools are registered in [src/tools/note/index.ts](./src/tools/note/index.ts), [src/tools/tree/index.ts](./src/tools/tree/index.ts), and [src/tools/roots/index.ts](./src/tools/roots/index.ts). To survey the surface, `grep -r "registerTool" src/tools`. README's [Tools](./README.md#tools) section tabulates all 17 with purposes and I/O shapes.
+
+## Local backlinks
+
+`src/main/backlinks/` owns the bounded whole-root visible Markdown graph and surgical writeback to `kb_notion_mirror_backlinks` alone. `src/tools/backlinks/` exposes read-only preview and default-dry-run write-gated sync. Local KB wikilinks are the sole source; Notion never supplies reverse authority. The exact grammar, bounds, exclusions, generated ownership and per-file atomic guarantees live in [Local backlinks](docs/guides/user/local-backlinks.md). The server's remote default still requires a token; only explicit `MCP_KI_KB_NOTION_MIRROR_LOCAL_ONLY=true` uses token-free `loadLocalConfig` wiring. The CLI local backlinks commands need no token.

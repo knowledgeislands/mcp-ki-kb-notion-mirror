@@ -207,9 +207,22 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): Config => {
     // Notion versions the API via a header, not the URL. Bump when Notion ships a new stable date.
     notionApiVersion: '2022-06-28',
     imagesEnabled: env.MCP_KI_KB_NOTION_MIRROR_IMAGES === 'true',
-    kbRoot: resolveKbRoot(env.MCP_KI_KB_NOTION_MIRROR_KB_ROOT),
+    ...loadLocalConfig(env),
     bannerTemplate: env.MCP_KI_KB_NOTION_MIRROR_BANNER_TEMPLATE ?? DEFAULT_BANNER_TEMPLATE,
-    mirror: loadMirrorSettings(env),
+    mirror: loadMirrorSettings(env)
+  }
+}
+
+export type LocalConfig = Pick<
+  Config,
+  'kbRoot' | 'accessLevel' | 'auditLogMode' | 'auditLogPath' | 'auditLogMaxBytes' | 'auditLogKeep'
+>
+
+/** Local filesystem/access settings; no token or remote URL requirement. */
+export const loadLocalConfig = (env: NodeJS.ProcessEnv = process.env): LocalConfig => {
+  hydrateEnvFromFiles()
+  return {
+    kbRoot: resolveKbRoot(env.MCP_KI_KB_NOTION_MIRROR_KB_ROOT),
     accessLevel: parseAccessLevel(env.MCP_KI_KB_NOTION_MIRROR_ACCESS_LEVEL),
     auditLogMode: parseAuditLogMode(env.MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG),
     auditLogPath: path.resolve(
@@ -229,4 +242,12 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): Config => {
       'MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG_KEEP'
     )
   }
+}
+
+/** Remote mode stays the default; local-only server requires explicit opt-in. */
+export const loadServerConfig = (env: NodeJS.ProcessEnv = process.env): { local: LocalConfig; remote?: Config } => {
+  hydrateEnvFromFiles()
+  if (env.MCP_KI_KB_NOTION_MIRROR_LOCAL_ONLY === 'true') return { local: loadLocalConfig(env) }
+  const remote = loadConfig(env)
+  return { local: remote, remote }
 }

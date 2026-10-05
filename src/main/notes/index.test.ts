@@ -409,7 +409,12 @@ describe('note verbs', () => {
         dry_run: true,
         would_archive_url: MIRROR_URL,
         would_archive_page_id: PAGE_HEX,
-        would_clear_fields: ['kb_notion_mirror_url', 'kb_notion_mirror_published_at', 'kb_notion_mirror_hash']
+        would_clear_fields: [
+          'kb_notion_mirror_url',
+          'kb_notion_mirror_published_at',
+          'kb_notion_mirror_hash',
+          'kb_notion_mirror_backlinks'
+        ]
       })
       expect(fetchMock).not.toHaveBeenCalled()
       expect(await fsp.readFile(abs, 'utf-8')).toBe(content)

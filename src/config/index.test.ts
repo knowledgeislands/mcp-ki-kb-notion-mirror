@@ -306,3 +306,17 @@ it('enables confined image uploads only through an explicit true opt-in', () => 
   expect(load({ MCP_KI_KB_NOTION_MIRROR_IMAGES: 'false' }).imagesEnabled).toBe(false)
   expect(load({ MCP_KI_KB_NOTION_MIRROR_IMAGES: 'true' }).imagesEnabled).toBe(true)
 })
+
+describe('explicit local-only configuration', () => {
+  it('loads local tools without token or remote URL validation, leaving remote default strict', async () => {
+    const { loadLocalConfig, loadServerConfig } = await import('./index.js')
+    expect(loadLocalConfig({}).accessLevel).toBe('write')
+    const local = loadServerConfig({
+      MCP_KI_KB_NOTION_MIRROR_LOCAL_ONLY: 'true',
+      MCP_KI_KB_NOTION_MIRROR_API_BASE_URL: 'http://unsafe'
+    })
+    expect(local.remote).toBeUndefined()
+    expect(() => loadServerConfig({})).toThrow('TOKEN')
+    expect(loadServerConfig({ MCP_KI_KB_NOTION_MIRROR_TOKEN: 'ntn_Alpha' }).remote?.notionToken).toBe('ntn_Alpha')
+  })
+})

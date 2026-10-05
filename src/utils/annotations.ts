@@ -49,3 +49,16 @@ export const DESTRUCTIVE_REMOTE = {
   idempotentHint: true,
   openWorldHint: true
 } as const
+
+export const READ_ONLY = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: false
+} as const
+export const WRITE_IDEMPOTENT = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: false
+} as const

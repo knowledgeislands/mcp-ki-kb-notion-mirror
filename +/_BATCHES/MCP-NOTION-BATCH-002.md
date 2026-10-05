@@ -13,3 +13,7 @@ policy: safe-local-v1
 ---
 
 # MCP-NOTION-BATCH-002
+
+## Run ledger
+
+<!-- ki-batch-run: MCP-NOTION-BATCH-002-RUN-001 1fadd8eed3b85f7b5c289431cbdec8c5b28245fa379fbc17c33a44ed9bafb483 -->

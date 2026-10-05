@@ -39,17 +39,17 @@
 
 import { McpServer } from '@modelcontextprotocol/server'
 import { serveStdio } from '@modelcontextprotocol/server/stdio'
-import { loadConfig } from '../config/index.js'
+import { loadServerConfig } from '../config/index.js'
+import { registerBacklinksTools } from '../tools/backlinks/index.js'
 import { registerNoteTools } from '../tools/note/index.js'
 import { registerRootsTools } from '../tools/roots/index.js'
 import { registerTreeTools } from '../tools/tree/index.js'
 import { makeAccessGatedRegister } from '../utils/access-level.js'
 
-const config = loadConfig()
-const settings = config.mirror
+const { local: config, remote } = loadServerConfig()
 
 console.error(`mcp-ki-kb-notion-mirror starting...`)
-console.error(`  MCP_KI_KB_NOTION_MIRROR_API_BASE_URL=${config.notionApiBaseUrl}`)
+console.error(`  mode=${remote ? 'remote + local' : 'local-only'}`)
 console.error(`  MCP_KI_KB_NOTION_MIRROR_KB_ROOT=${config.kbRoot ?? '(unset — kb_path must be absolute)'}`)
 console.error(`  MCP_KI_KB_NOTION_MIRROR_ACCESS_LEVEL=${config.accessLevel}`)
 console.error(
@@ -74,9 +74,12 @@ const createServer = (): McpServer => {
     keep: config.auditLogKeep
   })
 
-  registerNoteTools(server, config)
-  registerTreeTools(server, config, settings)
-  registerRootsTools(server, config, settings)
+  registerBacklinksTools(server, config)
+  if (remote) {
+    registerNoteTools(server, remote)
+    registerTreeTools(server, remote, remote.mirror)
+    registerRootsTools(server, remote, remote.mirror)
+  }
   return server
 }
 

@@ -4,15 +4,16 @@ Read this before pointing the server at a knowledge base you care about. It edit
 
 One rule underlies all of it: **the knowledge base is canonical, and Notion is a derivative read surface.** Where the two disagree, the knowledge base wins and the Notion page is overwritten. Nothing in this server reads the mirror back.
 
-## In your notes: three fields, nothing else
+## In your notes: four fields, nothing else
 
-The server writes exactly three frontmatter fields, and treats every other field in the file as read-only:
+The server writes exactly four frontmatter fields, and treats every other field in the file as read-only:
 
 | Field | Written by | Meaning |
 | --- | --- | --- |
 | `kb_notion_mirror_url` | `touch` | The mirror page's Notion URL. Stable for the life of the page. |
 | `kb_notion_mirror_published_at` | `touch`, `update`, `baseline` | ISO-8601 UTC stamp of the last push. |
 | `kb_notion_mirror_hash` | `update`, `baseline` | Digest of the last pushed state, so an unchanged note can be skipped. |
+| `kb_notion_mirror_backlinks` | `backlinks sync` | Versioned local incoming-link provenance. |
 
 ```yaml
 ---
@@ -26,7 +27,7 @@ kb_notion_mirror_hash: 9f2c…
 ---
 ```
 
-Frontmatter is edited by line surgery, not by a YAML round-trip, precisely so that nothing else moves: field order, quoting, spacing, and comments in the rest of the block survive untouched. New fields are inserted immediately after `notion_path`, falling back to `notion_source_url_secondary` and then `notion_source_url`. Writes are atomic, so an interrupted run leaves a whole file rather than half of one.
+Frontmatter is edited by line surgery, not by a YAML round-trip, precisely so that nothing else moves: field order, quoting, spacing, and comments in the rest of the block survive untouched. New remote metadata fields are inserted immediately after `notion_path`, falling back to `notion_source_url_secondary` and then `notion_source_url`. The local backlinks field is appended at the end of frontmatter to preserve multiline anchor values. Existing fields update in place. Writes are atomic, so an interrupted run leaves a whole file rather than half of one.
 
 The server also **reads** three fields it never writes: `kb_notion_mirror_root` marks a folder index as a mirror root, `icon` selects the page icon, and `mirror: exclude` or `kb_notion_mirror_exclude` opts a note — or, on a folder index, a whole subtree — out of mirroring.
 
@@ -58,3 +59,7 @@ That heading is a mirror-only sentinel. It is **never** written back into the kn
 ## The audit log
 
 Every write is recorded, by default, as a line of JSON at `~/.local/state/mcp-ki-kb-notion-mirror/audit.jsonl`, rotated by size. It is local, it is yours, and it is the fastest answer to "what did this do to my notes". [Install and configure the mirror](installation.md) covers the scope, path, and rotation settings.
+
+## Local incoming-link provenance
+
+[Local backlinks](local-backlinks.md) is the sole additional source-write surface: it recomputes `kb_notion_mirror_backlinks` from local wikilinks, never from Notion. Every other field and all Markdown bytes remain untouched. Unknown or hand-authored content in the generated field is refused. Delete cleanup clears all four generated fields; a later backlinks sync regenerates local provenance independently of Notion.

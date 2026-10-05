@@ -105,3 +105,7 @@ If any of this fails, [Troubleshoot the mirror](troubleshooting.md) covers every
 ## Confined image uploads
 
 Set `MCP_KI_KB_NOTION_MIRROR_IMAGES=true` only when you want changed pushes to upload local sibling assets. It is disabled by default. Image references must resolve inside the note's `<Note basename> - images/` sibling directory; PNG, JPEG, GIF and WebP are supported, with at most 16 distinct assets and 1,024 references per note, 5 MiB per asset and 20 MiB in total. Upload identities are cached as private generated files in `image-uploads/` beside the configured audit-log file, even when audit logging is off; losing that cache only causes re-upload on the next changed push. Diff and baseline read image bytes but never upload or write the cache.
+
+## Local backlinks without a Notion token
+
+The remote mode above remains the default. For only local incoming-link provenance, set `MCP_KI_KB_NOTION_MIRROR_LOCAL_ONLY=true` and the configured KB root; no token is required, and no remote tools are registered. The same access gate and audit settings apply. The CLI's `backlinks preview` and default-dry-run `backlinks sync` need only the KB root. Read [Local backlinks](local-backlinks.md) for the exact source scope, generated field and apply guarantees.

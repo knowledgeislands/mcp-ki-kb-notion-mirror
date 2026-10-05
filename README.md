@@ -2,7 +2,7 @@
 
 Local stdio MCP server that **mirrors** Knowledge Base markdown notes into Notion and records the resulting Notion URL back into each note's YAML frontmatter.
 
-The KB is canonical; the Notion mirror is a derivative read surface for people who don't work in the KB. The server exposes **three resources** of tools, all prefixed `kb_notion_mirror_` (the repo-derived app name):
+The KB is canonical; the Notion mirror is a derivative read surface for people who don't work in the KB. The server exposes **four resources** of tools, all prefixed `kb_notion_mirror_` (the repo-derived app name):
 
 - **`note`** (`kb_notion_mirror_note_*`) — act on one `kb_path` per call and (for mutations) a Notion `parent` you supply. File-aware but layout-agnostic: no directory walking, no parent resolution.
 - **`tree`** (`kb_notion_mirror_tree_*`) — walk a caller-supplied `subtree` folder under the KB root, apply the folder-index hierarchy convention, and attach the subtree's root under a caller-supplied `parent`. Built on the note verbs.
@@ -43,7 +43,7 @@ Each resource shares one verb set (the `note`/`tree` columns show where a verb e
 
 ## Tools
 
-Fifteen tools across the three resources. `note` (8):
+Seventeen tools across four resources. `note` (8):
 
 - **`kb_notion_mirror_note_get(kb_path)`** — read. Live Notion page state, or `{ exists: false, reason: "not-mirrored" }`.
 - **`kb_notion_mirror_note_status(kb_path)`** — read. `{ published, url?, published_at? }` from frontmatter; no Notion call.
@@ -68,7 +68,14 @@ Tree verbs return `{ eligible, outcomes: NoteOutcome[] }` where `NoteOutcome` is
 
 - **`kb_notion_mirror_roots_list()`** — read. `[{ subtree, indexKbPath, parent }]`.
 
-Which of the fifteen are registered depends on the configured access level; the three destructive tools are absent unless you ask for them. See [Install and configure the mirror](docs/guides/user/installation.md).
+Local `backlinks` (2):
+
+| Tool | Purpose | Input |
+| --- | --- | --- |
+| `kb_notion_mirror_backlinks_preview` | Propose local incoming-link provenance. | Optional `kb_path`. |
+| `kb_notion_mirror_backlinks_sync` | Recompute only the generated backlinks field. | Optional `kb_path`, `dry_run` (default true). |
+
+Which of the seventeen are registered depends on the configured access level; the three destructive tools are absent unless you ask for them. See [Install and configure the mirror](docs/guides/user/installation.md).
 
 ## Conventions it relies on
 
@@ -77,7 +84,7 @@ Four conventions shape what the tools do. Each is explained, with what to do abo
 - **The folder-index hierarchy.** A folder's index note is `<Folder>/<Folder>.md`, and that note becomes the folder's Notion page; leaves nest under it and sub-folder indexes nest under the grandparent. → [Mirror a knowledge base](docs/guides/user/mirroring-a-knowledge-base.md)
 - **Mirror roots.** A folder index carrying `kb_notion_mirror_root` declares itself a root and names the Notion parent it attaches under. Discovery reads it; mutation never does. → [Mirror a knowledge base](docs/guides/user/mirroring-a-knowledge-base.md)
 - **Wikilinks.** `[[target]]` and `[[target|display]]` resolve through a `link_map` into Notion `@`mentions; an unresolved target renders as italic text rather than failing. → [Mirror a knowledge base](docs/guides/user/mirroring-a-knowledge-base.md)
-- **The mirror frontmatter.** The server writes three fields — `kb_notion_mirror_url`, `kb_notion_mirror_published_at`, `kb_notion_mirror_hash` — and treats everything else in the block as read-only. → [What the mirror owns](docs/guides/user/what-the-mirror-owns.md)
+- **The mirror frontmatter.** The server writes four fields — `kb_notion_mirror_url`, `kb_notion_mirror_published_at`, `kb_notion_mirror_hash`, `kb_notion_mirror_backlinks` — and treats everything else in the block as read-only. → [What the mirror owns](docs/guides/user/what-the-mirror-owns.md)
 
 It also maintains one mirror-only artefact: a `Child Pages` `heading_2` above a page's native child links, refreshed automatically and never written back into the KB. Any future "read the mirror back into the KB" path must recognise that sentinel and strip it.
 
@@ -85,7 +92,7 @@ It also maintains one mirror-only artefact: a `Child Pages` `heading_2` above a 
 
 Image uploads are opt-in: set `MCP_KI_KB_NOTION_MIRROR_IMAGES=true`. Markdown image references must resolve inside the note's exact `<Note basename> - images/` sibling directory. PNG, JPEG, GIF and WebP are supported, with at most 16 distinct assets and 1,024 references per note, 5 MiB per asset and 20 MiB total retained asset bytes. Repeated references share one byte snapshot. Paths and all budgets are checked before upload; code examples stay literal. Existing rendering is retained when the option is disabled.
 
-Changed image bytes change the push hash even when the Markdown does not change. Unchanged pushes make no Notion calls. Upload IDs are reused from restricted-permission generated JSON files in `image-uploads/` beside the configured audit-log file. Existing user-state symlinks, public cache directories or public/nonregular cache files are refused before upload; the cache directory must be private (0700) and generated files are 0600. Validation is repeated before persistence. If an existing generated cache directory has broader permissions, make that exact directory private before retrying. This state is a rebuildable cache, not KB knowledge: losing it causes re-upload on the next actual changed/forced push. A malformed cache or rejected upload fails visibly; clear only the corresponding generated cache file before retrying a stale identity. No fourth mirror field is written into notes.
+Changed image bytes change the push hash even when the Markdown does not change. Unchanged pushes make no Notion calls. Upload IDs are reused from restricted-permission generated JSON files in `image-uploads/` beside the configured audit-log file. Existing user-state symlinks, public cache directories or public/nonregular cache files are refused before upload; the cache directory must be private (0700) and generated files are 0600. Validation is repeated before persistence. If an existing generated cache directory has broader permissions, make that exact directory private before retrying. This state is a rebuildable cache, not KB knowledge: losing it causes re-upload on the next actual changed/forced push. A malformed cache or rejected upload fails visibly; clear only the corresponding generated cache file before retrying a stale identity. Image uploads write no additional frontmatter field.
 
 Diff and baseline read image bytes but never upload or write upload state. Baseline remains an explicit assertion that the mirror already matches; use it only after verifying the image content is already published. Diff conservatively reports local image digest placeholders against remote hosted images, whose byte identity cannot be established from signed URLs alone. An image difference is therefore a review signal, not proof of a remote byte edit. Mixed inline references preserve the paragraph text and render image blocks beside it; code spans/fences and external references keep the existing renderer's semantics.
 
@@ -100,3 +107,9 @@ Diff and baseline read image bytes but never upload or write upload state. Basel
 ## Roadmap
 
 See [ROADMAP.md](./ROADMAP.md) for how forward work is managed, and [`docs/roadmap/`](docs/roadmap/) for the items themselves.
+
+## Local backlinks
+
+[Local backlinks](docs/guides/user/local-backlinks.md) derives incoming links from local KB wikilinks, preserving all bytes outside `kb_notion_mirror_backlinks`. `kb_notion_mirror_backlinks_preview` is read-only; `kb_notion_mirror_backlinks_sync` requires write access and defaults to `dry_run: true`. Both accept optional `kb_path` to restrict write targets while still scanning the entire declared source scope. No Notion call occurs.
+
+The existing remote server remains the default and requires its Notion token. Set `MCP_KI_KB_NOTION_MIRROR_LOCAL_ONLY=true` explicitly to serve only these local tools without a token. The CLI commands `backlinks preview [<kbPath>]` and `backlinks sync [<kbPath>]` need only the configured KB root; add `--apply` to opt into sync writes. A read access level refuses apply.

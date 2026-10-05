@@ -15,7 +15,7 @@
 // secrets: the server only needs MCP_KI_KB_NOTION_MIRROR_TOKEN to boot, so we
 // pass a throwaway placeholder — no real Notion call is ever made.
 
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Client } from '@modelcontextprotocol/client'
@@ -25,6 +25,8 @@ import { StdioClientTransport } from '@modelcontextprotocol/client/stdio'
 // src/tools/{note,tree,roots}/index.ts and the access-level tests.
 // Add a tool → update both.
 const EXPECTED_TOOLS = [
+  'kb_notion_mirror_backlinks_preview',
+  'kb_notion_mirror_backlinks_sync',
   'kb_notion_mirror_note_diff',
   'kb_notion_mirror_note_get',
   'kb_notion_mirror_note_status',
@@ -51,15 +53,16 @@ const die = (msg: string, detail?: unknown): never => {
 // Placeholder config so boot validation passes headless, and access level
 // raised to `destructive` so the smoke sees the full surface (the default
 // `write` gate would otherwise hide the archive verbs).
-const createTransport = (kbRoot: string): StdioClientTransport =>
+const createTransport = (kbRoot: string, local = false, access = 'destructive'): StdioClientTransport =>
   new StdioClientTransport({
     command: 'node',
     args: ['dist/mcp-server/index.js'],
     env: {
       ...(process.env as Record<string, string>),
-      MCP_KI_KB_NOTION_MIRROR_TOKEN: 'ntn_smoke_placeholder',
+      MCP_KI_KB_NOTION_MIRROR_TOKEN: local ? '' : 'ntn_smoke_placeholder',
+      MCP_KI_KB_NOTION_MIRROR_LOCAL_ONLY: local ? 'true' : 'false',
       MCP_KI_KB_NOTION_MIRROR_KB_ROOT: kbRoot,
-      MCP_KI_KB_NOTION_MIRROR_ACCESS_LEVEL: 'destructive',
+      MCP_KI_KB_NOTION_MIRROR_ACCESS_LEVEL: access,
       MCP_KI_KB_NOTION_MIRROR_AUDIT_LOG: 'off'
     }
   })
@@ -129,6 +132,35 @@ const main = async (): Promise<void> => {
       await legacyClient.close()
     }
 
+    const raw = '---\nhand: Alpha\n---\n[[Beta]]'
+    writeFileSync(join(kbRoot, 'Alpha.md'), raw)
+    writeFileSync(join(kbRoot, 'Beta.md'), '---\nhand: Beta\n---\n')
+    for (const access of ['read', 'write']) {
+      const localClient = new Client({ name: 'backlinks-Alpha-smoke', version: '0.0.0' }, { capabilities: {}, versionNegotiation: { mode: 'auto' } })
+      await localClient.connect(createTransport(kbRoot, true, access))
+      try {
+        const localTools = (await localClient.listTools()).tools.map((tool) => tool.name).sort()
+        const localExpected = access === 'read' ? ['kb_notion_mirror_backlinks_preview'] : ['kb_notion_mirror_backlinks_preview', 'kb_notion_mirror_backlinks_sync']
+        if (JSON.stringify(localTools) !== JSON.stringify(localExpected)) die('local-only access gate differs', localTools)
+        const preview = await localClient.callTool({ name: 'kb_notion_mirror_backlinks_preview', arguments: {} })
+        if (preview.isError || !(preview.structuredContent as Record<string, unknown> | undefined)?.scan_complete) die('local-only preview failed', preview)
+        if (readFileSync(join(kbRoot, 'Alpha.md'), 'utf8') !== raw) die('preview changed source')
+        if (access === 'write') {
+          const dry = await localClient.callTool({ name: 'kb_notion_mirror_backlinks_sync', arguments: {} })
+          if (dry.isError || (dry.structuredContent as Record<string, unknown> | undefined)?.dry_run !== true) die('sync did not default to dry run', dry)
+          if (readFileSync(join(kbRoot, 'Alpha.md'), 'utf8') !== raw) die('default sync changed source')
+          const applied = await localClient.callTool({ name: 'kb_notion_mirror_backlinks_sync', arguments: { kb_path: 'Beta.md', dry_run: false } })
+          if (applied.isError || !readFileSync(join(kbRoot, 'Beta.md'), 'utf8').includes('kb_notion_mirror_backlinks:')) die('local-only apply failed', applied)
+          const invalid = await localClient.callTool({ name: 'kb_notion_mirror_backlinks_sync', arguments: { kb_path: '../Gamma.md' } })
+          if (!invalid.isError) die('unsafe backlink path accepted')
+        }
+      } finally { await localClient.close() }
+    }
+    const localLegacy = new Client({ name: 'backlinks-legacy-Alpha', version: '0.0.0' }, { capabilities: {} })
+    await localLegacy.connect(createTransport(kbRoot, true, 'read'))
+    try {
+      if (localLegacy.getProtocolEra() !== 'legacy' || (await localLegacy.listTools()).tools.length !== 1) die('local legacy access gate failed')
+    } finally { await localLegacy.close() }
     console.error(`✓ smoke passed: modern discovery, legacy fallback, ${names.length} tools, valid result envelope`)
   } finally {
     await client.close()

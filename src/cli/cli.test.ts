@@ -7,7 +7,10 @@
  * regression could not reach a real workspace: without the refusal these
  * invocations would fail later, on configuration, with a different message.
  */
+
 import { spawnSync } from 'node:child_process'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -42,5 +45,36 @@ describe('CLI --dry-run refusal', () => {
   it('still reaches configuration for a supported preview verb', () => {
     const result = runCli('roots', 'prune', '--dry-run')
     expect(result.stderr).not.toContain('--dry-run is not supported')
+  })
+})
+
+describe('local backlinks CLI', () => {
+  it('needs no token, previews by default and applies only with write access', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'backlinks-Alpha-cli-'))
+    const raw = '---\nhand: Alpha\n---\n'
+    writeFileSync(path.join(root, 'Alpha.md'), raw)
+    const run = (args: string[], access = 'write') =>
+      spawnSync('bun', [CLI, ...args], {
+        encoding: 'utf8',
+        timeout: 20000,
+        env: {
+          PATH: process.env.PATH ?? '',
+          MCP_KI_KB_NOTION_MIRROR_TOKEN: '',
+          MCP_KI_KB_NOTION_MIRROR_KB_ROOT: root,
+          MCP_KI_KB_NOTION_MIRROR_ACCESS_LEVEL: access
+        }
+      })
+    try {
+      expect(run(['backlinks', 'preview']).status).toBe(0)
+      expect(run(['backlinks', 'sync']).status).toBe(0)
+      expect(readFileSync(path.join(root, 'Alpha.md'), 'utf8')).toBe(raw)
+      expect(run(['backlinks', 'sync', '--apply'], 'read').stderr).toContain('requires write access')
+      expect(run(['backlinks', 'sync', '--apply', '--dry-run']).stderr).toContain('conflict')
+      expect(run(['backlinks', 'unknown']).stderr).toContain('Unknown backlinks verb')
+      expect(run(['backlinks', 'sync', 'Alpha.md', '--apply']).status).toBe(0)
+      expect(readFileSync(path.join(root, 'Alpha.md'), 'utf8')).toContain('kb_notion_mirror_backlinks:')
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
   })
 })

@@ -7,7 +7,7 @@
  *
  * The note layer is file-aware but layout-agnostic: it reads the note's
  * frontmatter (+ body, for `update`) and writes back ONLY the mirror-owned
- * fields (`MIRROR_FIELDS`: url / published_at / hash). It does not discover files, resolve parents,
+ * fields (`MIRROR_FIELDS`: url / published_at / hash / backlinks). It does not discover files, resolve parents,
  * or know any folder convention — the caller supplies `kb_path` and (for
  * mutations) the Notion `parent`.
  *
@@ -53,7 +53,12 @@ export { diffNote } from './diff.js'
  *  - `published_at` — the last mirror time, for remote-drift detection (`--verify`).
  *  - `hash`         — content hash of the last push, for the zero-call skip in `updateNote`.
  */
-export const MIRROR_FIELDS = ['kb_notion_mirror_url', 'kb_notion_mirror_published_at', 'kb_notion_mirror_hash'] as const
+export const MIRROR_FIELDS = [
+  'kb_notion_mirror_url',
+  'kb_notion_mirror_published_at',
+  'kb_notion_mirror_hash',
+  'kb_notion_mirror_backlinks'
+] as const
 const MAX_CHILDREN_PER_REQUEST = 100
 
 /** Optional touch extras: page icon. */

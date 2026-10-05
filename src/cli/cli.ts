@@ -20,7 +20,8 @@
  */
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { loadConfig, loadKbRoot } from '../config/index.js'
+import { loadConfig, loadKbRoot, loadLocalConfig } from '../config/index.js'
+import { syncBacklinks } from '../main/backlinks/index.js'
 import type { NotionParent } from '../main/notion-client/index.js'
 import { unsupportedDryRunError } from './dry-run.js'
 import {
@@ -71,7 +72,10 @@ note  <verb> <kbPath>   verbs: get | status | preflight | diff | touch | update 
 tree  <verb> <subtree>  verbs: status | preflight | touch | update | delete | prune | baseline
 roots <verb>            verbs: list | touch | update | publish | delete | prune | baseline
 
+backlinks preview|sync [<kbPath>]   complete local scope; optional single write target
+
 Flags:
+  --apply             backlinks sync only: opt in to local generated-field writes
   --parent-db <id>    Notion wiki database parent (note diff|touch|update|move, tree touch|update)
   --parent-page <id>  Notion page parent (same verbs)
   --note <kbPath>     restrict a tree op to one note's ancestor chain
@@ -322,6 +326,19 @@ const main = async (): Promise<void> => {
     process.exit(2)
   }
 
+  if (resource === 'backlinks') {
+    if (verb !== 'preview' && verb !== 'sync') throw new Error('Unknown backlinks verb; use preview or sync.')
+    if (dryRun && argv.includes('--apply')) throw new Error('--dry-run and --apply conflict.')
+    const cfg = loadLocalConfig()
+    if (verb === 'sync' && argv.includes('--apply') && cfg.accessLevel === 'read')
+      throw new Error('Backlinks apply requires write access.')
+    return json(
+      await syncBacklinks(cfg, {
+        ...(target === undefined ? {} : { kb_path: target }),
+        dry_run: verb === 'preview' || !argv.includes('--apply')
+      })
+    )
+  }
   if (resource === 'note') return runNote(verb, target as string, argv, dryRun)
   if (resource === 'tree') return runTree(verb, target as string, argv, dryRun)
   if (resource === 'roots') return runRoots(verb, argv, dryRun)
