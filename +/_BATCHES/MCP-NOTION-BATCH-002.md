@@ -17,3 +17,8 @@ policy: safe-local-v1
 ## Run ledger
 
 <!-- ki-batch-run: MCP-NOTION-BATCH-002-RUN-001 1fadd8eed3b85f7b5c289431cbdec8c5b28245fa379fbc17c33a44ed9bafb483 -->
+| Item | Result | Baseline | Result commit | Exception |
+| --- | --- | --- | --- | --- |
+| MCP-NOTION-TOOL-003 | done | `66e21d1d75cb7177ae7e246880adf2a70175b397` | `3857d0ddd840ca87c7d8596fd83b6247e9a710e1` | None |
+
+<!-- ki-batch-close: MCP-NOTION-BATCH-002 done 3857d0ddd840ca87c7d8596fd83b6247e9a710e1 -->
