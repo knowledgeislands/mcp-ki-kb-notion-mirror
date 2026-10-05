@@ -3,13 +3,13 @@ id: MCP-NOTION-TOOL-001
 area: TOOL
 title: Build image upload pipeline
 theme: tool-surface
-horizon: next
-status: draft
+horizon: now
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-07-29T00:37:05Z
-updated_at: 2026-10-04T21:45:00Z
+updated_at: 2026-10-05T07:36:49Z
 ---
 
 ## Goal
@@ -98,6 +98,10 @@ Option B is a rebuildable external generated-state cache with atomic writes, res
 Proposed bounded asset policy: resolve only `<Note basename without .md> - images/` beside the note; use lexical and realpath containment for every member; support PNG, JPEG, GIF and WebP; limit each note to 16 distinct assets, 5 MiB per asset and 20 MiB total. These are proposed local safety budgets, not claims about every Notion workspace's upload limit. Validate all assets and budgets before network or local mutation.
 
 Proposed change detection: hash actual image bytes on each render/preview and use stable asset placeholders/digests in the body hash, never transient upload IDs. `renderNoteBody`, diff and baseline remain upload-free and cache-write-free. A push uploads changed or uncached assets before replacing the body, persists only successfully attached identities, and permits at most one bounded re-upload on a proven stale identity. Missing files, malformed cache state and upload failure must fail clearly rather than silently preserve a stale picture. The plan must explain baseline semantics and retry/idempotence before Ready.
+
+## Approved delivery contract
+
+The principal's current autonomous completion instruction and coordinator's bounded selection choose option B: an external rebuildable generated-state cache beside the configured audit-state file, keyed by canonical note identity and destination page. Preserve the three-field canonical-note write boundary. Image upload is explicitly opt-in through `MCP_KI_KB_NOTION_MIRROR_IMAGES`; retain existing rendering when disabled. Selected safety budgets are 16 distinct PNG/JPEG/GIF/WebP assets per note, 5 MiB per asset and 20 MiB aggregate; assets remain confined to the exact note sibling directory. Read actual bytes for stable digests, avoid uploads and cache writes in diff/baseline, and upload only after a changed push is selected. External-cache loss causes bounded re-upload. Preserve timeout/token handling and use mock-only verification. Backlink work remains independent pending source-authority decision.
 
 ## Discussion
 
