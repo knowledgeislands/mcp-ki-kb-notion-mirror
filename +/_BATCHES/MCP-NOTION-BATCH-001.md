@@ -18,6 +18,8 @@ policy: safe-local-v1
 
 <!-- ki-batch-run: MCP-NOTION-BATCH-001-RUN-001 3df972a0e29b0830ef6fdad19d20d04bceb4bd20db69eefcb2983c435f32c74d -->
 
-- MCP-NOTION-TOOL-001: awaiting-review; baseline `2f6cb44947f68a3604db2b67b82d6c7d7d700ebf`; result is the commit containing this ledger entry; independent coordinator review precedes closure. Documented conservative image-diff behavior and generated-cache recovery; no live provider calls.
+| Item | Result | Baseline | Result commit | Exception |
+| --- | --- | --- | --- | --- |
+| MCP-NOTION-TOOL-001 | done | `2f6cb44947f68a3604db2b67b82d6c7d7d700ebf` | `d58ceac9d78c76bbd9973c3b53850bbeb71aa36f` | Memory/cache safety repairs independently approved atadaa03b |
 
-- MCP-NOTION-TOOL-001: independent review of delivery `74c279bda96c7dec23c2ec540fe8a622cb508fe1` required bounded-reference memory and private no-symlink cache repairs; corrected result is the commit containing this entry, still awaiting-review; baseline remains `2f6cb44947f68a3604db2b67b82d6c7d7d700ebf`.
+<!-- ki-batch-close: MCP-NOTION-BATCH-001 done d58ceac9d78c76bbd9973c3b53850bbeb71aa36f -->
