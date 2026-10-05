@@ -23,7 +23,7 @@ import { join } from 'node:path'
 import type { Config } from '../../config/index.js'
 import { archivePage, extractPageIdFromUrl } from '../notion-client/index.js'
 import { isUnwalkableDir, MAX_WALK_DEPTH, readFrontmatter } from './discover.js'
-import type { NoteOutcome, TreeResult } from './index.js'
+import type { NoteOutcome, TreeResult } from './outcomes.js'
 import type { MirrorSettings } from './settings.js'
 
 const requireRoot = (cfg: Config): string => {

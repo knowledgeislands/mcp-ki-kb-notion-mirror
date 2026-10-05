@@ -30,20 +30,10 @@ import {
   readFrontmatter,
   resolveParent
 } from './discover.js'
+import type { NoteOutcome, TreeResult } from './outcomes.js'
 import type { MirrorSettings } from './settings.js'
 
-/** The outcome of acting on a single note during a tree op. */
-export interface NoteOutcome {
-  kbPath: string
-  action: 'touch' | 'update' | 'delete' | 'skip' | 'plan' | 'baseline' | 'error'
-  url?: string
-  error?: string
-}
-
-export interface TreeResult {
-  eligible: number
-  outcomes: NoteOutcome[]
-}
+export type { NoteOutcome, TreeResult } from './outcomes.js'
 
 export interface TreeOneResult {
   chain: string[]

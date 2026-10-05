@@ -57,6 +57,8 @@ Run `bun run` with no args for the full script list.
 - **[src/cli/](./src/cli/)** — the operator surface (renamed from `orchestrator` for the common `main`/`cli` shape). `cli.ts` is the `mcp-ki-kb-notion-mirror-publish` bin — a `<resource> <verb>` dispatcher that does all human-readable printing; coverage-excluded. `index.ts` is the library barrel re-exporting `main/{notes,trees,roots}` + settings.
 - **[src/utils/](./src/utils/)** — cross-MCP helpers taking the specific config primitive they need (`resolveKbNotePath(kbRoot, kbPath)`, `withAuditLog(auditConfig, …)`, `makeAccessGatedRegister(server, accessLevel, audit)`). `notion-args.ts` holds the shared `parentArg`/`notionId` zod schemas; it and `annotations.ts` are pure data and coverage-excluded.
 
+This dependency direction is enforced, not just described: [.dependency-cruiser.ts](./.dependency-cruiser.ts) states each boundary as a named rule and [src/boundaries.test.ts](./src/boundaries.test.ts) cruises the source graph and proves every rule still rejects a deliberate crossing. The checker runs from its own install root, `tooling/boundaries`, because dependency-cruiser needs a TypeScript below 7.
+
 The reader split in [src/main/notes/read.ts](./src/main/notes/read.ts) is deliberate: `readNoteFrontmatter` (cheap, used by touch/get/move/delete/status/preflight and the walks) vs `readFullNote` (adds the stripped body — only `update` runs the expensive markdown→blocks pipeline).
 
 ### Reading nothing to stdout
