@@ -167,3 +167,85 @@ it('anchors an absolute note without a configured KB root to its parent', async 
   cfg.kbRoot = undefined
   expect((await render()).assets).toHaveLength(1)
 })
+
+it('shares one byte snapshot across repeated references and caps reference metadata', async () => {
+  await fs.writeFile(path.join(root, 'Alpha - images', 'Beta.png'), Buffer.alloc(1024 * 1024))
+  const read = vi.spyOn(fs, 'readFile')
+  read.mockClear()
+  const rendered = await render(Array.from({ length: 25 }, () => '![Beta](Alpha - images/Beta.png)').join('\n\n'))
+  expect(rendered.assets).toHaveLength(25)
+  expect(new Set(rendered.assets.map((asset) => asset.bytes)).size).toBe(1)
+  expect(new Set(rendered.assets.map((asset) => asset.bytes)).values().next().value!.length).toBe(1024 * 1024)
+  expect(read).toHaveBeenCalledTimes(1)
+  await expect(
+    render(Array.from({ length: 1025 }, () => '![Beta](Alpha - images/Beta.png)').join('\n\n'))
+  ).rejects.toThrow('reference budget')
+})
+
+it('rejects linked state ancestry and linked cache directory before upload without writing outside', async () => {
+  api()
+  const rendered = await render()
+  const outside = path.join(root, 'Outside')
+  await fs.mkdir(outside, { mode: 0o700 })
+  await fs.symlink(outside, path.join(root, 'state'))
+  await expect(uploadRenderedImages(cfg, 'Alpha', page, rendered)).rejects.toThrow('symlinks')
+  expect(fetch).not.toHaveBeenCalled()
+  expect(await fs.readdir(outside)).toEqual([])
+  await fs.unlink(path.join(root, 'state'))
+  await fs.mkdir(path.join(root, 'state'))
+  await fs.symlink(outside, path.join(root, 'state', 'image-uploads'))
+  await expect(uploadRenderedImages(cfg, 'Alpha', page, rendered)).rejects.toThrow('symlinks')
+  expect(fetch).not.toHaveBeenCalled()
+  expect(await fs.readdir(outside)).toEqual([])
+})
+
+it('rejects public or non-directory cache roots before upload and revalidates prior to persistence', async () => {
+  api()
+  const rendered = await render()
+  const dir = path.join(root, 'state', 'image-uploads')
+  await fs.mkdir(dir, { recursive: true, mode: 0o755 })
+  await expect(uploadRenderedImages(cfg, 'Alpha', page, rendered)).rejects.toThrow('0700')
+  expect(fetch).not.toHaveBeenCalled()
+  await fs.rm(dir, { recursive: true })
+  await fs.writeFile(dir, 'not a directory', { mode: 0o600 })
+  await expect(uploadRenderedImages(cfg, 'Alpha', page, rendered)).rejects.toThrow('0700')
+  await fs.unlink(dir)
+  const prepared = await uploadRenderedImages(cfg, 'Alpha', page, rendered)
+  const outside = path.join(root, 'Outside')
+  await fs.mkdir(outside, { mode: 0o700 })
+  await fs.symlink(outside, dir)
+  await expect(prepared.persist()).rejects.toThrow('symlinks')
+  expect(await fs.readdir(outside)).toEqual([])
+})
+
+it('rejects linked, public and non-file cache entries before any upload', async () => {
+  api()
+  const rendered = await render()
+  await (await uploadRenderedImages(cfg, 'Alpha', page, rendered)).persist()
+  const dir = path.join(root, 'state', 'image-uploads')
+  const file = path.join(dir, (await fs.readdir(dir))[0]!)
+  expect((await fs.stat(dir)).mode & 0o777).toBe(0o700)
+  vi.mocked(fetch).mockClear()
+  await fs.chmod(file, 0o644)
+  await expect(uploadRenderedImages(cfg, 'Alpha', page, rendered)).rejects.toThrow('private regular file')
+  await fs.unlink(file)
+  const outside = path.join(root, 'Outside.json')
+  await fs.writeFile(outside, '{}', { mode: 0o600 })
+  await fs.symlink(outside, file)
+  await expect(uploadRenderedImages(cfg, 'Alpha', page, rendered)).rejects.toThrow('private regular file')
+  await fs.unlink(file)
+  await fs.mkdir(file, { mode: 0o700 })
+  await expect(uploadRenderedImages(cfg, 'Alpha', page, rendered)).rejects.toThrow('private regular file')
+  expect(fetch).not.toHaveBeenCalled()
+  expect(await fs.readFile(outside, 'utf8')).toBe('{}')
+})
+
+it('rejects aggregate byte growth beyond the preflight stat snapshot', async () => {
+  let body = ''
+  for (let i = 0; i < 5; i++) {
+    await fs.writeFile(path.join(root, 'Alpha - images', `${i}.png`), Buffer.alloc(5 * 1024 * 1024))
+    body += `![Beta](Alpha - images/${i}.png)\n\n`
+  }
+  vi.spyOn(fs, 'stat').mockResolvedValue({ isFile: () => true, size: 0 } as Awaited<ReturnType<typeof fs.stat>>)
+  await expect(render(body)).rejects.toThrow('budget')
+})

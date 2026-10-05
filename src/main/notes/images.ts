@@ -42,7 +42,7 @@ export const renderImages = async (
   const sibling = path.join(noteDir, `${path.basename(abs, path.extname(abs))} - images`)
   const assets: ImageAsset[] = []
   let total = 0
-  const unique = new Set<string>()
+  const unique = new Map<string, { bytes: Buffer; hash: string }>()
   // Code spans and fenced blocks remain literal. External images retain the existing renderer's behavior.
   const chunks = body.split(/(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/g)
   for (let i = 0; i < chunks.length; i += 2) {
@@ -58,16 +58,21 @@ export const renderImages = async (
       resolveKbNotePath(sibling, path.resolve(noteDir, ref))
       const mime = MIME[path.extname(target).toLowerCase()]
       if (!mime) throw new Error('Unsupported local image type')
-      const stat = await fs.stat(target)
-      if (!stat.isFile() || stat.size > 5 * 1024 * 1024) throw new Error('Image must be a file no larger than 5 MiB')
-      const bytes = await fs.readFile(target)
-      if (bytes.length > 5 * 1024 * 1024) throw new Error('Image grew beyond 5 MiB')
-      if (!unique.has(target)) {
-        unique.add(target)
+      if (assets.length >= 1024) throw new Error('Note image reference budget exceeded')
+      let snapshot = unique.get(target)
+      if (!snapshot) {
+        if (unique.size >= 16) throw new Error('Note image budget exceeded')
+        const stat = await fs.stat(target)
+        if (!stat.isFile() || stat.size > 5 * 1024 * 1024) throw new Error('Image must be a file no larger than 5 MiB')
+        if (total + stat.size > 20 * 1024 * 1024) throw new Error('Note image budget exceeded')
+        const bytes = await fs.readFile(target)
+        if (bytes.length > 5 * 1024 * 1024) throw new Error('Image grew beyond 5 MiB')
+        if (total + bytes.length > 20 * 1024 * 1024) throw new Error('Note image budget exceeded')
         total += bytes.length
+        snapshot = { bytes, hash: digest(bytes) }
+        unique.set(target, snapshot)
       }
-      if (unique.size > 16 || total > 20 * 1024 * 1024) throw new Error('Note image budget exceeded')
-      const hash = digest(bytes)
+      const { bytes, hash } = snapshot
       const marker = `${PREFIX}${assets.length}/`
       assets.push({ marker, hash, filename: path.basename(target), mime, bytes, alt: match[1]! })
       transformed = transformed.replace(match[0], marker)
@@ -123,6 +128,32 @@ export interface UploadedImages {
   blocks: unknown[]
   persist: () => Promise<void>
 }
+/** Reject user-state symlinks and public cache objects before upload, then revalidate before persistence. */
+const validateCache = async (stateDir: string, cachePath: string): Promise<void> => {
+  let cursor = path.resolve(stateDir)
+  const root = path.parse(cursor).root
+  while (cursor !== root) {
+    try {
+      const stat = await fs.lstat(cursor)
+      // Top-level OS aliases (/var and /tmp on macOS) are trusted host roots, not user-state links.
+      if (stat.isSymbolicLink() && path.dirname(cursor) !== root)
+        throw new Error('Image state ancestry must not contain symlinks')
+      if (cursor === path.resolve(stateDir) && (!stat.isDirectory() || (stat.mode & 0o077) !== 0))
+        throw new Error('Image cache directory must be private (0700)')
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
+    }
+    cursor = path.dirname(cursor)
+  }
+  try {
+    const stat = await fs.lstat(cachePath)
+    if (!stat.isFile() || stat.isSymbolicLink() || (stat.mode & 0o077) !== 0)
+      throw new Error('Image cache file must be a private regular file')
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
+  }
+}
+
 /** Upload only on an actual push. State loss is safe: re-upload. Malformed state fails before mutation. */
 export const uploadRenderedImages = async (
   cfg: Config,
@@ -134,6 +165,7 @@ export const uploadRenderedImages = async (
   if (rendered.assets.length === 0) return { blocks: rendered.blocks, persist: async () => {} }
   const stateDir = path.join(path.dirname(cfg.auditLogPath), 'image-uploads')
   const cachePath = path.join(stateDir, `${digest(JSON.stringify([abs, pageId, cfg.notionApiBaseUrl]))}.json`)
+  await validateCache(stateDir, cachePath)
   let cache: Record<string, string> = {}
   try {
     cache = JSON.parse(await fs.readFile(cachePath, 'utf8')) as Record<string, string>
@@ -173,7 +205,9 @@ export const uploadRenderedImages = async (
   return {
     blocks: rewrite(rendered.blocks) as unknown[],
     persist: async () => {
+      await validateCache(stateDir, cachePath)
       await fs.mkdir(stateDir, { recursive: true, mode: 0o700 })
+      await validateCache(stateDir, cachePath)
       const temp = `${cachePath}.${randomUUID()}.tmp`
       try {
         await fs.writeFile(temp, JSON.stringify(current), { mode: 0o600 })

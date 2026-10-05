@@ -9,7 +9,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 2f6cb44947f68a3604db2b67b82d6c7d7d700ebf
 created_at: 2026-07-29T00:37:05Z
-updated_at: 2026-10-05T07:45:12Z
+updated_at: 2026-10-05T07:53:30Z
 ---
 
 ## Goal
@@ -115,7 +115,7 @@ Added `src/main/notes/images.ts` and co-located fixture tests for sibling confin
 
 ### Verification
 
-`bun run test`: 370 tests pass. `bun run test:coverage`: 100% statements, branches, functions and lines (800 branches). `bunx tsc --noEmit`, `bun run build`, `bun run ki:test:smoke` and `bunx knip` pass. Focused `ki-engineering`, `ki-repo-mcp` and `ki-work-roadmap` audits pass. Biome formatting/check succeeds with advisory non-null-assertion warnings, including existing diff warnings; no lint error is bypassed. Smoke preserves the 15-tool surface. All network tests use synthetic fetch responses and all filesystem tests use disposable fixture roots.
+`bun run test`: 375 tests pass. `bun run test:coverage`: 100% statements, branches, functions and lines (822 branches). `bunx tsc --noEmit`, `bun run build`, `bun run ki:test:smoke` and `bunx knip` pass. Focused `ki-engineering`, `ki-repo-mcp` and `ki-work-roadmap` audits pass. Biome formatting/check succeeds with advisory non-null-assertion warnings, including existing diff warnings; no lint error is bypassed. Smoke preserves the 15-tool surface. All network tests use synthetic fetch responses and all filesystem tests use disposable fixture roots.
 
 ### Outstanding concerns
 
@@ -123,7 +123,7 @@ No incomplete delivery task remains in this item. Product limits are documented:
 
 ### Post-change review
 
-Changed asset bytes alter the pushed content hash independently of upload IDs; unchanged pushes make zero Notion calls. Path and budget rejection occurs before upload. Upload state is persisted only after body attachment succeeds, and cache loss safely re-uploads. Preview/baseline does not upload or mutate generated state, and source frontmatter remains limited to existing mirror-owned fields. Goal and bounded scope are satisfied for the documented Markdown reference grammar and opt-in operation; ready for independent review.
+Changed asset bytes alter the pushed content hash independently of upload IDs; unchanged pushes make zero Notion calls. Path and budget rejection occurs before upload. Repeated references share one canonical byte snapshot, reference metadata is capped at 1,024, and retained unique asset payload is capped at 20 MiB. Existing user-state symlinks or public cache objects are refused before upload and revalidated before persistence. Upload state is persisted only after body attachment succeeds, and cache loss safely re-uploads. Preview/baseline does not upload or mutate generated state, and source frontmatter remains limited to existing mirror-owned fields. Goal and bounded scope are satisfied for the documented Markdown reference grammar and opt-in operation; ready for independent review.
 
 ### Mini recap
 
@@ -146,3 +146,7 @@ The selected external-state, opt-in and budget contract is implemented and verif
 ### Owner question disposition
 
 The earlier cache-choice question is resolved by the current completion instruction and coordinator selection of external generated state with the stated budgets. No fourth canonical-note field is introduced. Backlink write-back authority remains in its independent work record, outside this image delivery.
+
+### Independent review repairs
+
+Independent review of `74c279bda96c7dec23c2ec540fe8a622cb508fe1` found that repeated references retained duplicate Buffers and existing cache-directory symlinks/public permissions were accepted. The repair reuses one byte snapshot per canonical asset, caps references separately, rejects over-budget new asset payload before retention, and validates physical user-state ancestry plus private directory/file types before upload and again before persistence. Regression fixtures reproduce 25 references to a 1 MiB file (one Buffer and one file read), linked state/cache directories (zero provider calls and unchanged outside directory), 0755 cache directories, linked/public/nonregular cache files and ancestry replacement before persistence. Fresh full coverage and delivery gates below supersede the initial candidate evidence. Top-level operating-system path aliases are trusted host roots; no cross-process lock against a malicious same-user filesystem writer is claimed.
