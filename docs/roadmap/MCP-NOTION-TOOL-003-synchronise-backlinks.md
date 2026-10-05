@@ -4,12 +4,12 @@ area: TOOL
 title: Synchronise backlinks
 theme: tool-surface
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 66e21d1d75cb7177ae7e246880adf2a70175b397
 created_at: 2026-07-29T00:37:05Z
-updated_at: 2026-10-05T11:19:09Z
+updated_at: 2026-10-05T11:21:22Z
 ---
 
 ## Goal
@@ -99,6 +99,14 @@ The author reviewed source and fixture evidence against the one-field authority,
 ### Mini recap
 
 Delivered actual local KB provenance writeback alongside pure previews, explicit safe apply and clear completeness/failure semantics. All source gates pass; final record checks accompany the delivery commit. Practical learning belongs in the local backlinks guide and ownership guide. No new work or knowledge trade is created by this recap.
+
+## Done
+
+Accepted by the parent coordinator under the approved outcome authority for MCP-NOTION-BATCH-002 after independent exact-commit review of `ef710473f774bca2048dc76f4395eb1f30d319f3`. The required delivery gates pass, and 16 additional parent-owned synthetic filesystem assertions independently confirm pure preview, local identity resolution, multiline metadata and 0600 preservation, stale removal, idempotence, ambiguity/symlink refusal and prewrite output bounds. All four formative safety findings are corrected.
+
+The accepted implementation writes only the generated backlinks field within the documented visible-Markdown scope, keeps remote token validation, and makes no live Notion or private KB operation. Unresolved references and per-file rather than batch atomicity remain documented limitations. Human instructions approve reviewed completion and pruning; no Paperclip issue or unresolved completion-observation trade retains this item.
+
+Prune reference preflight searched all nine MCP repositories, the canonical Harness, tools-ki, and the known Arcadia roadmap peer. No surviving document link or rationale dependency on this record was found; the completed outcome batch contains only verified historical identity/evidence and may be retired after closure.
 
 ## Discussion
 
