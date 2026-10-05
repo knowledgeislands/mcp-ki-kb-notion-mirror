@@ -104,4 +104,4 @@ If any of this fails, [Troubleshoot the mirror](troubleshooting.md) covers every
 
 ## Confined image uploads
 
-Set `MCP_KI_KB_NOTION_MIRROR_IMAGES=true` only when you want changed pushes to upload local sibling assets. It is disabled by default. See [Local images](../../../README.md#local-images) for supported references, fixed budgets, generated-cache location and read-only preview limits. The image cache lives beside the configured audit state even when audit logging is off.
+Set `MCP_KI_KB_NOTION_MIRROR_IMAGES=true` only when you want changed pushes to upload local sibling assets. It is disabled by default. Image references must resolve inside the note's `<Note basename> - images/` sibling directory; PNG, JPEG, GIF and WebP are supported, with at most 16 distinct assets and 1,024 references per note, 5 MiB per asset and 20 MiB in total. Upload identities are cached as private generated files in `image-uploads/` beside the configured audit-log file, even when audit logging is off; losing that cache only causes re-upload on the next changed push. Diff and baseline read image bytes but never upload or write the cache.
