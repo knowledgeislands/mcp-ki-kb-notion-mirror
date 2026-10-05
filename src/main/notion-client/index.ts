@@ -54,8 +54,11 @@ const request = async <T>(
   try {
     resp = await fetch(`${cfg.notionApiBaseUrl}${apiPath}`, {
       method,
-      headers: headers(cfg),
-      body: body === undefined ? undefined : JSON.stringify(body),
+      headers:
+        body instanceof FormData
+          ? Object.fromEntries(Object.entries(headers(cfg)).filter(([key]) => key !== 'Content-Type'))
+          : headers(cfg),
+      body: body instanceof FormData ? body : body === undefined ? undefined : JSON.stringify(body),
       signal: AbortSignal.timeout(NOTION_REQUEST_TIMEOUT_MS)
     })
   } catch (err) {
@@ -366,4 +369,21 @@ export const deleteBlock = async (cfg: NotionConfig, blockId: string): Promise<v
     if (err instanceof NotionApiError && err.status === 400 && /archived/i.test(err.message)) return
     throw err
   }
+}
+
+/** Upload a confined small image. The upload URL returned by Notion is never trusted as a fetch target. */
+export const uploadImage = async (
+  cfg: NotionConfig,
+  filename: string,
+  mime: string,
+  bytes: Buffer
+): Promise<string> => {
+  const created = await request<{ id: string }>(cfg, 'POST', '/v1/file_uploads', { filename, content_type: mime })
+  const id = normalizeId(created.id)
+  const form = new FormData()
+  form.append('file', new Blob([new Uint8Array(bytes)], { type: mime }), filename)
+  const sent = await request<{ status: string }>(cfg, 'POST', `/v1/file_uploads/${id}/send`, form)
+  if (sent.status !== 'uploaded')
+    throw new NotionApiError(0, '', 'upload_failed', 'Notion image upload did not reach uploaded status')
+  return id
 }

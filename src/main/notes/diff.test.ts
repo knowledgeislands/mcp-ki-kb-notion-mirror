@@ -502,4 +502,20 @@ describe('note diff', () => {
           ])
     await expect(diffNote(cfg, note, PARENT)).rejects.toThrow('Unsupported text rich content')
   })
+  it('renders image digest proposals without uploading or writing generated state', async () => {
+    cfg.imagesEnabled = true
+    cfg.auditLogPath = path.join(root, 'state', 'audit.jsonl')
+    await fs.mkdir(path.join(root, 'My Note - images'))
+    await fs.writeFile(path.join(root, 'My Note - images', 'Beta.png'), 'alpha')
+    await fs.writeFile(
+      note,
+      `---\nkb_notion_mirror_url: ${URL}\n---\n# My Note\n\n![Beta](My Note - images/Beta.png)\n`
+    )
+    vi.mocked(fs.writeFile).mockClear()
+    const result = await diffNote(cfg, note, PARENT)
+    expect(result.status).toBe('compared')
+    expect(requests.every((request) => request.method === 'GET')).toBe(true)
+    expect(fs.writeFile).not.toHaveBeenCalled()
+    await expect(fs.readdir(path.join(root, 'state'))).rejects.toThrow()
+  })
 })

@@ -589,4 +589,33 @@ describe('note verbs', () => {
       })
     })
   })
+  it('uploads opt-in image bytes, skips unchanged content, detects image edits, and baselines without calls', async () => {
+    cfg.imagesEnabled = true
+    cfg.auditLogPath = path.join(kbRoot, 'state', 'audit.jsonl')
+    await fsp.mkdir(path.join(kbRoot, 'Alpha - images'))
+    await fsp.writeFile(path.join(kbRoot, 'Alpha - images', 'Beta.png'), 'alpha')
+    const abs = await writeNote(
+      'Alpha.md',
+      FM(`\nkb_notion_mirror_url: ${MIRROR_URL}`).replace('Body paragraph.', '![Beta](Alpha - images/Beta.png)')
+    )
+    routeUpdate([])
+    const normal = fetchMock.getMockImplementation() as (url: string, opts?: { method?: string }) => Promise<Response>
+    fetchMock.mockImplementation(async (url, opts) => {
+      if (String(url).endsWith('/file_uploads')) return ok({ id: 'b'.repeat(32) })
+      if (String(url).endsWith('/send')) return ok({ status: 'uploaded' })
+      return normal(url, opts)
+    })
+    await updateNote(cfg, abs, { type: 'database_id', database_id: DB_ID })
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/send'))).toBe(true)
+    expect(await fsp.readFile(abs, 'utf8')).not.toContain('kb_notion_mirror_assets')
+    fetchMock.mockClear()
+    expect(await updateNote(cfg, abs, { type: 'database_id', database_id: DB_ID })).toMatchObject({ skipped: true })
+    expect(fetchMock).not.toHaveBeenCalled()
+    await fsp.writeFile(path.join(kbRoot, 'Alpha - images', 'Beta.png'), 'omega')
+    await updateNote(cfg, abs, { type: 'database_id', database_id: DB_ID })
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/send'))).toBe(true)
+    fetchMock.mockClear()
+    await baselineNote(cfg, abs, { type: 'database_id', database_id: DB_ID })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
 })

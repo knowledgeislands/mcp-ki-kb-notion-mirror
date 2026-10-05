@@ -80,6 +80,8 @@ export interface Config {
   notionApiVersion: string
   /** Absolute KB root. When set, `kb_path`s resolve under it and are confined to it; when unset, only absolute paths are accepted. */
   kbRoot: string | undefined
+  /** Explicit opt-in for confined local image uploads. */
+  imagesEnabled?: boolean
   bannerTemplate: string
   /** Mirror-walk settings (skip prefixes/paths + icon base URL). */
   mirror: MirrorSettings
@@ -204,6 +206,7 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): Config => {
     notionApiBaseUrl: parseNotionApiBaseUrl(env.MCP_KI_KB_NOTION_MIRROR_API_BASE_URL),
     // Notion versions the API via a header, not the URL. Bump when Notion ships a new stable date.
     notionApiVersion: '2022-06-28',
+    imagesEnabled: env.MCP_KI_KB_NOTION_MIRROR_IMAGES === 'true',
     kbRoot: resolveKbRoot(env.MCP_KI_KB_NOTION_MIRROR_KB_ROOT),
     bannerTemplate: env.MCP_KI_KB_NOTION_MIRROR_BANNER_TEMPLATE ?? DEFAULT_BANNER_TEMPLATE,
     mirror: loadMirrorSettings(env),

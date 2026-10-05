@@ -81,6 +81,14 @@ Four conventions shape what the tools do. Each is explained, with what to do abo
 
 It also maintains one mirror-only artefact: a `Child Pages` `heading_2` above a page's native child links, refreshed automatically and never written back into the KB. Any future "read the mirror back into the KB" path must recognise that sentinel and strip it.
 
+## Local images
+
+Image uploads are opt-in: set `MCP_KI_KB_NOTION_MIRROR_IMAGES=true`. Markdown image references must resolve inside the note's exact `<Note basename> - images/` sibling directory. PNG, JPEG, GIF and WebP are supported, with at most 16 distinct assets per note, 5 MiB per asset and 20 MiB total. Paths and all budgets are checked before upload; code examples stay literal. Existing rendering is retained when the option is disabled.
+
+Changed image bytes change the push hash even when the Markdown does not change. Unchanged pushes make no Notion calls. Upload IDs are reused from restricted-permission generated JSON files in `image-uploads/` beside the configured audit-log file. This state is a rebuildable cache, not KB knowledge: losing it causes re-upload on the next actual changed/forced push. A malformed cache or rejected upload fails visibly; clear only the corresponding generated cache file before retrying a stale identity. No fourth mirror field is written into notes.
+
+Diff and baseline read image bytes but never upload or write upload state. Baseline remains an explicit assertion that the mirror already matches; use it only after verifying the image content is already published. Diff conservatively reports local image digest placeholders against remote hosted images, whose byte identity cannot be established from signed URLs alone. An image difference is therefore a review signal, not proof of a remote byte edit. Mixed inline references preserve the paragraph text and render image blocks beside it; code spans/fences and external references keep the existing renderer's semantics.
+
 ## Documentation
 
 | Root | Question | What it holds |

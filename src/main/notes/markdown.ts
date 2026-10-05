@@ -10,9 +10,8 @@
  * `collapseSoftBreaks`). The banner is prepended separately (see src/banner.ts)
  * by the publish pipeline.
  *
- * Known gaps (tracked in docs/roadmap/MCP-NOTION-TOOL-001): local image references render as their
- * alt-text paragraph rather than uploaded images, and `[[wikilinks]]` pass
- * through as literal text.
+ * Local image uploads are implemented in the opt-in images renderer above this
+ * pure conversion seam. Wikilink resolution is likewise handled by render.ts.
  */
 import * as path from 'node:path'
 import { markdownToBlocks } from '@tryfabric/martian'

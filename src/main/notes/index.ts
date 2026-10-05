@@ -39,9 +39,9 @@ import { bannerBlock } from './banner.js'
 import { refreshFooter } from './footer.js'
 import { removeFrontmatterFields, upsertFrontmatterFields } from './frontmatter.js'
 import { computeBodyHash } from './hash.js'
+import { renderImages, uploadRenderedImages } from './images.js'
 import { titleFromPath } from './markdown.js'
 import { readFullNote, readNoteFrontmatter } from './read.js'
-import { renderNoteBody } from './render.js'
 import { getDatabaseTitleProperty } from './title-property.js'
 
 export type { DiffResult } from './diff.js'
@@ -224,7 +224,8 @@ export const updateNote = async (
   const title = titleFromPath(abs)
   // Resolve wikilinks on the stripped body, then turn the mention placeholders
   // martian carried through into real page mentions.
-  const bodyBlocks = renderNoteBody(body, options.linkMap)
+  const rendered = await renderImages(cfg, abs, body, options.linkMap)
+  const bodyBlocks = rendered.blocks
 
   // Zero-call skip: if nothing that determines the push (body, title, icon,
   // parent) has changed since the last mirror, don't touch Notion at all.
@@ -233,8 +234,9 @@ export const updateNote = async (
   if (!options.force && fields.kb_notion_mirror_hash === hash)
     return { skipped: true, url: existing, page_id: pageId, hash }
 
+  const uploaded = await uploadRenderedImages(cfg, abs, pageId, rendered)
   const banner = bannerBlock(cfg.bannerTemplate, new Date().toISOString().slice(0, 10))
-  const children = banner ? [banner, ...bodyBlocks] : bodyBlocks
+  const children = banner ? [banner, ...uploaded.blocks] : uploaded.blocks
 
   const titleProperty =
     parent.type === 'database_id' ? await getDatabaseTitleProperty(cfg, parent.database_id) : undefined
@@ -251,6 +253,7 @@ export const updateNote = async (
     }
   }
   await replaceBody(cfg, pageId, children)
+  await uploaded.persist()
   // Body replace cleared this page's footer heading; regenerate it. Refresh the
   // OLD parent's footer if we just re-parented away from a page parent, and the
   // new parent's footer if the new parent is a page.
@@ -290,7 +293,8 @@ export const baselineNote = async (
   if (!existing) return { skipped: true, reason: 'not-mirrored' }
 
   const title = titleFromPath(abs)
-  const bodyBlocks = renderNoteBody(body, options.linkMap)
+  const rendered = await renderImages(cfg, abs, body, options.linkMap)
+  const bodyBlocks = rendered.blocks
   const hash = computeBodyHash({ blocks: bodyBlocks, title, icon: options.icon, parent })
   const publishedAt = options.publishedAt ?? normalizePublishedAt(new Date().toISOString())
   await atomicWriteFile(

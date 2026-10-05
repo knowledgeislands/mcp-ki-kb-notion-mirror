@@ -300,3 +300,9 @@ describe('hydrateEnvFromFiles (via loadConfig)', () => {
     }
   })
 })
+
+it('enables confined image uploads only through an explicit true opt-in', () => {
+  expect(load().imagesEnabled).toBe(false)
+  expect(load({ MCP_KI_KB_NOTION_MIRROR_IMAGES: 'false' }).imagesEnabled).toBe(false)
+  expect(load({ MCP_KI_KB_NOTION_MIRROR_IMAGES: 'true' }).imagesEnabled).toBe(true)
+})

@@ -101,3 +101,7 @@ From an MCP client, ask it to list the server's tools. At the default `write` le
 If any of this fails, [Troubleshoot the mirror](troubleshooting.md) covers every error these steps can produce.
 
 [lucide-icons]: https://unpkg.com/lucide-static@latest/icons
+
+## Confined image uploads
+
+Set `MCP_KI_KB_NOTION_MIRROR_IMAGES=true` only when you want changed pushes to upload local sibling assets. It is disabled by default. See [Local images](../../../README.md#local-images) for supported references, fixed budgets, generated-cache location and read-only preview limits. The image cache lives beside the configured audit state even when audit logging is off.

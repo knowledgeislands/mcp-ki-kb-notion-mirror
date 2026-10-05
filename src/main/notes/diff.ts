@@ -11,9 +11,9 @@ import {
 } from '../notion-client/index.js'
 import { bannerBlock } from './banner.js'
 import { SENTINEL_TEXT } from './footer.js'
+import { renderImages } from './images.js'
 import { titleFromPath } from './markdown.js'
 import { readFullNote } from './read.js'
-import { renderNoteBody } from './render.js'
 
 const MAX_BLOCKS = 1000
 const MAX_FETCHED_BLOCKS = 10000
@@ -276,7 +276,7 @@ export const diffNote = async (
   if (!url) return { status: 'not-mirrored', reason: 'not-mirrored' }
   const pageId = extractPageIdFromUrl(url)
   if (!pageId) throw new Error(`Could not extract a 32-hex page id from kb_notion_mirror_url: ${url}`)
-  const local = renderNoteBody(body, options.linkMap)
+  const local = (await renderImages(cfg, abs, body, options.linkMap)).blocks
   countLocalBlocks(local)
   const page = await getPage(cfg, pageId)
   const remote = stripGenerated(cfg, await remoteTree(cfg, pageId))
