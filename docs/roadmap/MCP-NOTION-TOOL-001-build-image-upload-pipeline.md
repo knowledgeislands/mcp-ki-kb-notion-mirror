@@ -4,12 +4,12 @@ area: TOOL
 title: Build image upload pipeline
 theme: tool-surface
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 2f6cb44947f68a3604db2b67b82d6c7d7d700ebf
 created_at: 2026-07-29T00:37:05Z
-updated_at: 2026-10-05T07:53:30Z
+updated_at: 2026-10-05T07:57:12Z
 ---
 
 ## Goal
@@ -128,6 +128,10 @@ Changed asset bytes alter the pushed content hash independently of upload IDs; u
 ### Mini recap
 
 Delivered safe local-image rendering, upload transport and external identity state with full fixture verification. Durable operation and limits live in README/installation guidance; no extra learning promotion is requested. Awaiting independent review under the bound outcome authorisation.
+
+## Done
+
+Accepted under the named done-target MCP-NOTION-BATCH-001 outcome authority and the principal’s standing acceptance instruction. Independent reviewer `review_whatsapp_git` approved corrected exact delivery `adaa03b8896d1e65589b2414801675c9c29b6110` after reproducing both original safety defects: repeated references now share one buffer, and unsafe cache ancestry/permissions reject before uploads or external writes. The reviewer reran 81 focused tests and confirmed coverage evidence at 100% across 822 branches. The six-part packet and all planned Steps are satisfied. Documented conservative image diff and generated-cache recovery remain; no live Notion observation is claimed. Backlink write-back remains separately unapproved.
 
 ## Discussion
 
