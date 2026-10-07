@@ -59,8 +59,10 @@ organisation_code = "KIS"
 adapter = "roadmap"
 
 [skills.ki-work-roadmap]
-areas = ["TOOL"]
 components = ["tool-surface"]
+
+[skills.ki-work-roadmap.areas]
+TOOL = "Tool surface"
 
 [skills.ki-housekeeping-claude]
 auto_memory = "disabled"
