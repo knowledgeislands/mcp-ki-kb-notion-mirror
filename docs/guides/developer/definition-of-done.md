@@ -1,6 +1,6 @@
 # Definition of done
 
-Use this checklist before presenting a change to this server for review.
+Use this checklist so that a change to this server arrives for review with its invariants confirmed, its documentation moved with it, and the complete repository gate passing.
 
 ## Confirm the change
 
